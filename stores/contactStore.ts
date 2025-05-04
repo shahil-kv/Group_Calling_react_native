@@ -1,6 +1,6 @@
-import { create } from 'zustand';
 import * as Contacts from 'expo-contacts';
 import { Platform } from 'react-native';
+import { create } from 'zustand';
 
 export type Contact = {
   id: string;
@@ -65,7 +65,7 @@ export const useContactStore = create<ContactStore>((set, get) => ({
 
   importContacts: async () => {
     const { hasPermission, requestPermission } = get();
-    
+
     if (hasPermission === null) {
       const permissionGranted = await requestPermission();
       if (!permissionGranted) {
@@ -90,9 +90,10 @@ export const useContactStore = create<ContactStore>((set, get) => ({
 
       if (data.length > 0) {
         const formattedContacts: Contact[] = data
-          .filter(contact => 
-            contact.name && 
-            contact.phoneNumbers && 
+          .filter((contact): contact is Contacts.Contact & { id: string } =>
+            contact.id !== undefined &&
+            contact.name !== undefined &&
+            contact.phoneNumbers !== undefined &&
             contact.phoneNumbers.length > 0
           )
           .map(contact => ({
@@ -100,8 +101,8 @@ export const useContactStore = create<ContactStore>((set, get) => ({
             name: contact.name,
             phoneNumber: contact.phoneNumbers?.[0]?.number || '',
             email: contact.emails?.[0]?.email,
-            photo: contact.imageAvailable && contact.image ? 
-              (Platform.OS === 'android' ? contact.image.uri : contact.image.uri) : 
+            photo: contact.imageAvailable && contact.image ?
+              (Platform.OS === 'android' ? contact.image.uri : contact.image.uri) :
               undefined,
           }));
 
