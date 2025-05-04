@@ -1,8 +1,15 @@
+/**
+ * @file useApi.ts
+ * @description Custom hooks for making API calls with built-in error handling and loading states
+ * @author System
+ */
+
+import { ApiErrorResponse, MutationConfig } from '@/types/api.types';
+import { handleApiError } from '@/utils/error-handler';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError, isAxiosError } from 'axios';
+import axios from 'axios';
 import { useLoader } from '../contexts/LoaderContext';
 import { useToast } from './useToast';
-
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
@@ -11,25 +18,6 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
-
-type ValidationError = {
-    field: string;
-    message: string;
-};
-
-type ApiErrorResponse = {
-    success: false;
-    message: string;
-    errors?: ValidationError[];
-};
-
-type MutationConfig = {
-    invalidateQueriesOnSuccess?: string[];
-    showSuccessToast?: boolean;
-    showErrorToast?: boolean;
-    showLoader?: boolean;
-};
-
 const formatErrorMessage = (error: unknown): string => {
     try {
         if (error instanceof Error) {
@@ -45,21 +33,25 @@ const formatErrorMessage = (error: unknown): string => {
     }
 };
 
-const handleApiError = (error: unknown): string => {
-    if (isAxiosError(error)) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        if (axiosError.response?.data) {
-            const errorData = axiosError.response.data;
-            if (errorData.errors && errorData.errors.length > 0) {
-                return errorData.errors.map(err => err.message).join('\n');
-            }
-            return errorData.message || axiosError.message;
-        }
-        return axiosError.message;
-    }
-    return error instanceof Error ? error.message : 'An unexpected error occurred';
-};
-
+/**
+ * @function usePost
+ * @description Hook for making POST requests with built-in error handling and loading states
+ * @template TData - Type of the response data
+ * @template TVariables - Type of the request variables
+ * @param {string} endpoint - API endpoint to call
+ * @param {MutationConfig} [config] - Configuration options
+ * @returns {UseMutationResult<TData, Error, TVariables>} Mutation result object
+ * 
+ * @example
+ * const { mutate, isLoading } = usePost<ResponseType, RequestType>('/api/endpoint', {
+ *   showSuccessToast: true,
+ *   showErrorToast: true,
+ *   showLoader: true
+ * });
+ * 
+ * // Use the mutation
+ * mutate(requestData);
+ */
 export const usePost = <TData = unknown, TVariables = unknown>(
     endpoint: string,
     config?: MutationConfig
@@ -81,9 +73,9 @@ export const usePost = <TData = unknown, TVariables = unknown>(
                 }
                 return response.data;
             } catch (error) {
-                const errorMessage = handleApiError(error);
+                const appError = handleApiError(error);
                 if (showErrorToast) {
-                    toast.showError(errorMessage);
+                    toast.showError(appError.message);
                 }
                 throw error;
             } finally {
@@ -102,6 +94,24 @@ export const usePost = <TData = unknown, TVariables = unknown>(
     });
 };
 
+/**
+ * @function useGet
+ * @description Hook for making GET requests with built-in error handling and loading states
+ * @template TData - Type of the response data
+ * @param {string} endpoint - API endpoint to call
+ * @param {MutationConfig} [config] - Configuration options
+ * @returns {UseMutationResult<TData, Error, void>} Mutation result object
+ * 
+ * @example
+ * const { mutate, isLoading } = useGet<ResponseType>('/api/endpoint', {
+ *   showSuccessToast: true,
+ *   showErrorToast: true,
+ *   showLoader: true
+ * });
+ * 
+ * // Use the mutation
+ * mutate();
+ */
 export const useGet = <TData = unknown>(endpoint: string, config?: MutationConfig) => {
     const toast = useToast();
     const { showLoader, hideLoader } = useLoader();
@@ -119,9 +129,9 @@ export const useGet = <TData = unknown>(endpoint: string, config?: MutationConfi
                 }
                 return response.data;
             } catch (error) {
-                const errorMessage = handleApiError(error);
+                const appError = handleApiError(error);
                 if (showErrorToast) {
-                    toast.showError(errorMessage);
+                    toast.showError(appError.message);
                 }
                 throw error;
             } finally {

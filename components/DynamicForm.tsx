@@ -1,3 +1,9 @@
+/**
+ * @file DynamicForm.tsx
+ * @description A reusable form component that dynamically renders form fields based on configuration
+ * @author System
+ */
+
 // DynamicForm.tsx
 import { yupResolver } from '@hookform/resolvers/yup';
 import React from 'react';
@@ -17,6 +23,23 @@ const getKeyboardType = (type: string) => {
   }
 };
 
+/**
+ * @component PasswordInput
+ * @description A reusable password input component with show/hide functionality
+ * @param {Object} props - Component props
+ * @param {string} props.value - Current password value
+ * @param {(text: string) => void} props.onChange - Callback for password changes
+ * @param {string} [props.placeholder] - Placeholder text for the input
+ * @param {number} [props.maxLength] - Maximum length of the password
+ *
+ * @example
+ * <PasswordInput
+ *   value={password}
+ *   onChange={setPassword}
+ *   placeholder="Enter your password"
+ *   maxLength={20}
+ * />
+ */
 const PasswordInput: React.FC<{
   value: string;
   onChange: (text: string) => void;
@@ -168,6 +191,38 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
   );
 };
 
+/**
+ * @component DynamicForm
+ * @description A flexible form component that renders fields based on configuration
+ * @param {Object} props - Component props
+ * @param {FormField[]} props.fields - Array of field configurations
+ * @param {(data: any) => void} props.onSubmit - Callback for form submission
+ * @param {Object} [props.defaultValues] - Default values for form fields
+ * @param {Object} [props.validationSchema] - Yup validation schema
+ * @param {(handleSubmit: () => void) => React.ReactNode} [props.renderButton] - Custom submit button renderer
+ *
+ * @example
+ * const fields = [
+ *   {
+ *     name: 'email',
+ *     label: 'Email',
+ *     type: 'email',
+ *     required: true
+ *   },
+ *   {
+ *     name: 'password',
+ *     label: 'Password',
+ *     type: 'password',
+ *     required: true
+ *   }
+ * ];
+ *
+ * <DynamicForm
+ *   fields={fields}
+ *   onSubmit={handleSubmit}
+ *   validationSchema={validationSchema}
+ * />
+ */
 export const DynamicForm: React.FC<{
   fields: DynamicField[];
   onSubmit: (data: any) => void;
