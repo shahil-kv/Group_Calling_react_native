@@ -1,6 +1,6 @@
 // SignupScreen.tsx
 import OTPInputView from "@twotalltotems/react-native-otp-input";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -82,15 +82,20 @@ const formFields = [
 export default function SignupScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState("");
-  const { mutateAsync: signup, isPending } = usePost<FormData, FormData>(
-    "/user/register",
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const { mutateAsync: signup, isPending } = usePost("/user/register", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: true,
+  });
+  const { mutateAsync: verifyOTP, isPending: isVerifyingOTP } = usePost(
+    "/user/verify-phone",
     {
       invalidateQueriesOnSuccess: ["users", "auth"],
       showErrorToast: true,
       showSuccessToast: true,
     }
   );
-
   const onSubmit = async (data: FormData) => {
     try {
       const payload = {
@@ -99,6 +104,7 @@ export default function SignupScreen() {
         role: "USER",
       };
       await signup(payload);
+      setPhoneNumber(data.phoneNumber);
       setShowOTP(true);
     } catch (error) {
       console.error("Signup process error:", error);
@@ -108,8 +114,11 @@ export default function SignupScreen() {
   const handleOTPSubmit = async () => {
     try {
       // Simulate OTP verification
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // Navigate to home or login screen after successful OTP verification
+      await verifyOTP({
+        phoneNumber: phoneNumber,
+        otp,
+      });
+      router.navigate("/(tabs)");
     } catch (error) {
       console.error("OTP verification error:", error);
     }
