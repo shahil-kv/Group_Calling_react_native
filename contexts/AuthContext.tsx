@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     loadUser();
-  }, []);
+  }, [setUser]);
 
   const signIn = async (email: string, password: string) => {
     try {
