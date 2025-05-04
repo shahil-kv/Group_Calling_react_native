@@ -1,35 +1,55 @@
-import { Link } from "expo-router";
-import React, { useState } from "react";
+import { Link, router } from "expo-router";
+import React from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-// import { useAuth } from '@/contexts/AuthContext';
+import * as yup from "yup";
+import Button from "../../components/Button";
+import { DynamicForm } from "../../components/DynamicForm";
+import { useAuth } from "../../contexts/AuthContext";
+
+// Validation Schema
+const schema = yup.object({
+  phoneNumber: yup.string().required("Phone number is required"),
+  password: yup.string().required("Password is required"),
+});
+
+type FormData = yup.InferType<typeof schema>;
+
+const formFields = [
+  {
+    name: "phoneNumber",
+    label: "Phone Number",
+    type: "phone" as const,
+    placeholder: "Enter your phone number",
+    defaultCode: "+91",
+  },
+  {
+    name: "password",
+    label: "Password",
+    type: "password" as const,
+    placeholder: "Enter your password",
+  },
+];
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  //   const { signIn, loading } = useAuth();
+  const { signIn, isLoading } = useAuth();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError("Please fill in all fields");
-      return;
+  const onSubmit = async (data: FormData) => {
+    try {
+      console.log(data);
+
+      await signIn(data.phoneNumber, data.password);
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Login error:", error);
     }
-
-    // try {
-    //   setError('');
-    //   await signIn(email, password);
-    // } catch (err) {
-    //   setError('Login failed. Please check your credentials.');
-    // }
   };
 
   return (
@@ -51,55 +71,26 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          <View className="mb-6 space-y-4">
-            <View>
-              <Text className="mb-1 font-medium text-gray-700">Email</Text>
-              <TextInput
-                className="px-4 py-3 bg-white border border-gray-300 rounded-lg focus:border-secondary"
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
+          <DynamicForm
+            fields={formFields}
+            onSubmit={onSubmit}
+            validationSchema={schema}
+            renderButton={(handleSubmit) => (
+              <Button
+                title="Login"
+                onPress={handleSubmit}
+                fullWidth
+                size="lg"
+                loading={isLoading}
               />
-            </View>
-
-            <View>
-              <Text className="mb-1 font-medium text-gray-700">Password</Text>
-              <TextInput
-                className="px-4 py-3 bg-white border border-gray-300 rounded-lg focus:border-secondary"
-                placeholder="Enter your password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
-
-            {error ? (
-              <Text className="text-center text-error">{error}</Text>
-            ) : null}
-          </View>
-
-          <TouchableOpacity
-            className="items-center py-4 rounded-lg bg-primary "
-            onPress={handleLogin}
-          >
-            <Text className="text-lg font-bold text-white">Login</Text>
-          </TouchableOpacity>
+            )}
+          />
 
           <View className="flex-row justify-center mt-6">
             <Text className="text-gray-600">Dont have an account? </Text>
             <Link href="/(auth)/signup" asChild>
               <TouchableOpacity>
                 <Text className="font-medium text-secondary">Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-          <View className="flex-row justify-center mt-2">
-            <Text className="text-gray-600">Go to Home? </Text>
-            <Link href="/(tabs)" asChild>
-              <TouchableOpacity>
-                <Text className="font-medium text-secondary">Home</Text>
               </TouchableOpacity>
             </Link>
           </View>

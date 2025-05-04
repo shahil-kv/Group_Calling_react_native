@@ -54,18 +54,12 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const handleLogout = () => {
-    Alert.alert("Log Out", "Are you sure you want to log out?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Log Out",
-        onPress: signOut,
-        style: "destructive",
-      },
-    ]);
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Signout error:", error);
+    }
   };
 
   return (

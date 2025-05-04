@@ -1,114 +1,206 @@
-import { useUserStore } from "@/stores/userStore";
+import {
+  ApiResponse,
+  AuthContextType,
+  AuthTokens,
+  LoginResponse,
+  PremiumStatusResponse,
+  RefreshTokenResponse,
+  User,
+} from "@/types/authContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-type AuthContextType = {
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-};
+import { usePost } from "../hooks/useApi";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [loading, setLoading] = useState(true);
-  const { setUser, reset: resetUser } = useUserStore();
+  const [user, setUser] = useState<User | null>(null);
+  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { mutateAsync: login } = usePost<ApiResponse<LoginResponse>>(
+    "/user/login",
+    {
+      invalidateQueriesOnSuccess: ["users", "auth"],
+      showErrorToast: true,
+      showSuccessToast: true,
+      showLoader: true,
+    }
+  );
+
+  const { mutateAsync: refreshToken } = usePost<
+    ApiResponse<RefreshTokenResponse>
+  >("/user/refresh-token", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: false,
+    showLoader: false,
+  });
+
+  const { mutateAsync: logout } = usePost<ApiResponse<null>>("/user/logout", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: true,
+  });
+
+  const { mutateAsync: checkPremium } = usePost<
+    ApiResponse<PremiumStatusResponse>
+  >("/user/premium-status", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: false,
+    showLoader: false,
+  });
+
+  const { mutateAsync: upgradePremium } = usePost<
+    ApiResponse<PremiumStatusResponse>
+  >("/user/upgrade-premium", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: true,
+  });
 
   useEffect(() => {
-    // Check for existing session
-    const loadUser = async () => {
-      try {
-        const userString = await SecureStore.getItemAsync("user");
-        if (userString) {
-          const user = JSON.parse(userString);
-          setUser(user);
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/(auth)/login");
-        }
-      } catch (error) {
-        console.error("Error loading user:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadStoredAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    loadUser();
-  }, [setUser]);
-
-  const signIn = async (email: string, password: string) => {
+  const loadStoredAuth = async () => {
     try {
-      setLoading(true);
-      // In a real app, this would validate credentials with your auth provider
-      const user = {
-        id: "123",
-        email,
-        isPro: false,
-        features: {
-          maxGroups: 3,
-          maxContactsPerGroup: 10,
-          canRecordMessages: false,
-          canScheduleCalls: false,
-        },
-      };
+      const storedTokens = await AsyncStorage.getItem("auth_tokens");
+      const storedUser = await AsyncStorage.getItem("auth_user");
 
-      await SecureStore.setItemAsync("user", JSON.stringify(user));
-      setUser(user);
-      router.replace("/(tabs)");
+      if (storedTokens && storedUser) {
+        const parsedTokens = JSON.parse(storedTokens);
+        const parsedUser = JSON.parse(storedUser);
+
+        setTokens(parsedTokens);
+        setUser(parsedUser);
+
+        // Check if access token is expired
+        const tokenData = JSON.parse(
+          atob(parsedTokens.accessToken.split(".")[1])
+        );
+        if (tokenData.exp * 1000 < Date.now()) {
+          await refreshAccessToken();
+        }
+      }
     } catch (error) {
-      console.error("Sign in error:", error);
-      throw error;
+      console.error("Error loading stored auth:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signIn = async (phoneNumber: string, password: string) => {
     try {
-      setLoading(true);
-      // In a real app, this would create a new user in your auth provider
-      const user = {
-        id: "123",
-        email,
-        isPro: false,
-        features: {
-          maxGroups: 3,
-          maxContactsPerGroup: 10,
-          canRecordMessages: false,
-          canScheduleCalls: false,
-        },
-      };
+      const response = await login({ phoneNumber, password });
+      const { user, tokens } = response.data;
 
-      await SecureStore.setItemAsync("user", JSON.stringify(user));
+      await AsyncStorage.setItem("auth_tokens", JSON.stringify(tokens));
+      await AsyncStorage.setItem("auth_user", JSON.stringify(user));
+
       setUser(user);
+      setTokens(tokens);
       router.replace("/(tabs)");
     } catch (error) {
-      console.error("Sign up error:", error);
+      console.error("Login error:", error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
-      setLoading(true);
-      await SecureStore.deleteItemAsync("user");
-      resetUser();
-      router.replace("/(auth)/login");
+      if (tokens?.accessToken) {
+        await logout({});
+      }
     } catch (error) {
-      console.error("Sign out error:", error);
+      console.error("Logout API error:", error);
     } finally {
-      setLoading(false);
+      await AsyncStorage.removeItem("auth_tokens");
+      await AsyncStorage.removeItem("auth_user");
+      setUser(null);
+      setTokens(null);
+      router.replace("/(auth)/login");
+    }
+  };
+
+  const refreshAccessToken = async () => {
+    try {
+      if (!tokens?.refreshToken) {
+        throw new Error("No refresh token available");
+      }
+
+      const response = await refreshToken({
+        refreshToken: tokens.refreshToken,
+      });
+      const { tokens: newTokens } = response.data;
+
+      await AsyncStorage.setItem("auth_tokens", JSON.stringify(newTokens));
+      setTokens(newTokens);
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      await signOut();
+      throw error;
+    }
+  };
+
+  const checkPremiumStatus = async () => {
+    try {
+      const response = await checkPremium({});
+      const { is_premium, premium_expiry } = response.data;
+
+      setUser((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          is_premium,
+          premium_expiry,
+        };
+      });
+    } catch (error) {
+      console.error("Premium status check error:", error);
+      throw error;
+    }
+  };
+
+  const upgradeToPremium = async (plan: "monthly" | "yearly") => {
+    try {
+      const response = await upgradePremium({ plan });
+      const { is_premium, premium_expiry } = response.data;
+
+      setUser((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          is_premium,
+          premium_expiry,
+        };
+      });
+    } catch (error) {
+      console.error("Premium upgrade error:", error);
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        tokens,
+        isLoading,
+        signIn,
+        signOut,
+        refreshAccessToken,
+        checkPremiumStatus,
+        upgradeToPremium,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

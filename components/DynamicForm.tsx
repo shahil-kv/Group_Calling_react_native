@@ -1,25 +1,10 @@
 // DynamicForm.tsx
+import { DynamicField, FormFieldsProps } from "@/types/dynamic-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import React from "react";
-import { Control, Controller, useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-
-interface DynamicField {
-  name: string;
-  label: string;
-  type: "text" | "number" | "email" | "password" | "phone";
-  validation?: any;
-  placeholder?: string;
-  maxLength?: number;
-  defaultCode?: string;
-}
-
-interface FormFieldsProps {
-  control: Control<any>;
-  fields: DynamicField[];
-  errors: any;
-}
 
 const getKeyboardType = (type: string) => {
   switch (type) {

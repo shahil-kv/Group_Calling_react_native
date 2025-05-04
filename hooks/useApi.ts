@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError, isAxiosError } from 'axios';
+import { useLoader } from '../contexts/LoaderContext';
 import { useToast } from './useToast';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -26,6 +27,7 @@ type MutationConfig = {
     invalidateQueriesOnSuccess?: string[];
     showSuccessToast?: boolean;
     showErrorToast?: boolean;
+    showLoader?: boolean;
 };
 
 const formatErrorMessage = (error: unknown): string => {
@@ -51,7 +53,7 @@ const handleApiError = (error: unknown): string => {
             if (errorData.errors && errorData.errors.length > 0) {
                 return errorData.errors.map(err => err.message).join('\n');
             }
-            return errorData.message || 'An error occurred';
+            return errorData.message || axiosError.message;
         }
         return axiosError.message;
     }
@@ -64,11 +66,15 @@ export const usePost = <TData = unknown, TVariables = unknown>(
 ) => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { showSuccessToast = false, showErrorToast = true } = config || {};
+    const { showLoader, hideLoader } = useLoader();
+    const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true } = config || {};
 
     return useMutation({
         mutationFn: async (variables: TVariables) => {
             try {
+                if (shouldShowLoader) {
+                    showLoader();
+                }
                 const response = await api.post<TData>(endpoint, variables);
                 if (showSuccessToast) {
                     toast.showSuccess('Operation completed successfully');
@@ -80,6 +86,10 @@ export const usePost = <TData = unknown, TVariables = unknown>(
                     toast.showError(errorMessage);
                 }
                 throw error;
+            } finally {
+                if (shouldShowLoader) {
+                    hideLoader();
+                }
             }
         },
         onSuccess: () => {
@@ -94,11 +104,15 @@ export const usePost = <TData = unknown, TVariables = unknown>(
 
 export const useGet = <TData = unknown>(endpoint: string, config?: MutationConfig) => {
     const toast = useToast();
-    const { showSuccessToast = false, showErrorToast = true } = config || {};
+    const { showLoader, hideLoader } = useLoader();
+    const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true } = config || {};
 
     return useMutation({
         mutationFn: async () => {
             try {
+                if (shouldShowLoader) {
+                    showLoader();
+                }
                 const response = await api.get<TData>(endpoint);
                 if (showSuccessToast) {
                     toast.showSuccess('Data fetched successfully');
@@ -110,6 +124,10 @@ export const useGet = <TData = unknown>(endpoint: string, config?: MutationConfi
                     toast.showError(errorMessage);
                 }
                 throw error;
+            } finally {
+                if (shouldShowLoader) {
+                    hideLoader();
+                }
             }
         },
     });

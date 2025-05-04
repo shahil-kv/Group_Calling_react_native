@@ -83,19 +83,17 @@ export default function SignupScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const { mutateAsync: signup, isPending } = usePost("/user/register", {
+  const { mutateAsync: signup } = usePost("/user/register", {
+    invalidateQueriesOnSuccess: ["users", "auth"],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: false,
+  });
+  const { mutateAsync: verifyOTP } = usePost("/user/verify-phone", {
     invalidateQueriesOnSuccess: ["users", "auth"],
     showErrorToast: true,
     showSuccessToast: true,
   });
-  const { mutateAsync: verifyOTP, isPending: isVerifyingOTP } = usePost(
-    "/user/verify-phone",
-    {
-      invalidateQueriesOnSuccess: ["users", "auth"],
-      showErrorToast: true,
-      showSuccessToast: true,
-    }
-  );
   const onSubmit = async (data: FormData) => {
     try {
       const payload = {
@@ -150,9 +148,8 @@ export default function SignupScreen() {
               validationSchema={schema}
               renderButton={(handleSubmit) => (
                 <Button
-                  title={isPending ? "Signing Up..." : "Sign Up"}
+                  title="Sign Up"
                   onPress={handleSubmit}
-                  loading={isPending}
                   fullWidth
                   size="lg"
                 />
@@ -169,7 +166,10 @@ export default function SignupScreen() {
                   pinCount={6}
                   code={otp}
                   onCodeChanged={setOtp}
-                  autoFocusOnLoad
+                  autoFocusOnLoad={true}
+                  secureTextEntry={false}
+                  editable={true}
+                  keyboardType="number-pad"
                   codeInputFieldStyle={{
                     width: 40,
                     height: 50,
@@ -178,19 +178,24 @@ export default function SignupScreen() {
                     borderRadius: 8,
                     backgroundColor: "white",
                     color: "#1F2937",
+                    fontSize: 20,
+                    fontWeight: "600",
                   }}
                   codeInputHighlightStyle={{
                     borderColor: "#6366F1",
+                    borderWidth: 2,
                   }}
                   onCodeFilled={(code: string) => {
                     setOtp(code);
                   }}
+                  clearInputs={false}
+                  placeholderCharacter=""
+                  placeholderTextColor="#E5E7EB"
                 />
               </View>
               <Button
-                title={isPending ? "Verifying..." : "Verify OTP"}
+                title="Verify OTP"
                 onPress={handleOTPSubmit}
-                loading={isPending}
                 fullWidth
                 size="lg"
               />
