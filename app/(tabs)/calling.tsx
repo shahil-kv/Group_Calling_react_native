@@ -1,7 +1,4 @@
-import { CallStatus, useCallStore } from "@/stores/callStore";
-import { Contact, useContactStore } from "@/stores/contactStore";
-import { useGroupStore } from "@/stores/groupStore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -11,11 +8,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
+import { CallStatus, useCallStore } from '../../stores/callStore';
+import { Contact, useContactStore } from '../../stores/contactStore';
+import { useGroupStore } from '../../stores/groupStore';
 // import { Phone, User, PhoneOff, Check, X, Users, UserGroup, Mic, MessageSquare } from 'lucide-react-native';
 // import { useAuth } from '@/contexts/AuthContext';
-import * as Haptics from "expo-haptics";
-import Icon from "react-native-vector-icons/FontAwesome";
+import * as Haptics from 'expo-haptics';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 interface Group {
   id: string;
@@ -25,7 +25,7 @@ interface Group {
 
 // Mock implementation - would be replaced with actual calling libraries
 const mockInitiateCall = (phoneNumber: string): Promise<void> => {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     // Simulate API call or native module
     setTimeout(() => {
       console.log(`Initiating call to ${phoneNumber}`);
@@ -38,30 +38,28 @@ export default function CallingScreen() {
   // const { user } = useAuth();
   const { groups } = useGroupStore();
   const { contacts } = useContactStore();
-  const { currentCall, startCall, endCall, moveToNextContact, updateStatus } =
-    useCallStore();
+  const { currentCall, startCall, endCall, moveToNextContact, updateStatus } = useCallStore();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [isSelectingContacts, setIsSelectingContacts] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedMessage, setRecordedMessage] = useState("");
+  const [recordedMessage, setRecordedMessage] = useState('');
 
-  const isCallActive = currentCall.status !== "idle";
+  const isCallActive = currentCall.status !== 'idle';
 
   // Get current contact based on index
-  const currentContact =
-    isCallActive && currentCall.contacts[currentCall.currentIndex];
+  const currentContact = isCallActive && currentCall.contacts[currentCall.currentIndex];
 
   // Simulated call detection - would use react-native-call-detection in real implementation
   useEffect(() => {
-    if (currentCall.status === "calling" && currentContact) {
+    if (currentCall.status === 'calling' && currentContact) {
       const timer = setTimeout(() => {
         // Simulate the call being answered
-        updateStatus("connected");
+        updateStatus('connected');
 
         // In a real app, this would be handled by the call detection library
-        if (Platform.OS !== "web") {
+        if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
 
@@ -70,7 +68,7 @@ export default function CallingScreen() {
           const moveSuccess = moveToNextContact();
           if (!moveSuccess) {
             // All contacts have been called
-            updateStatus("completed");
+            updateStatus('completed');
           }
         }, 3000);
 
@@ -83,17 +81,14 @@ export default function CallingScreen() {
 
   const handleStartCall = async () => {
     if (selectedContacts.length === 0) {
-      Alert.alert(
-        "No Contacts Selected",
-        "Please select at least one contact to call."
-      );
+      Alert.alert('No Contacts Selected', 'Please select at least one contact to call.');
       return;
     }
 
     const contactLimit = false ? 500 : 200;
     if (selectedContacts.length > contactLimit) {
       Alert.alert(
-        "Contact Limit Exceeded",
+        'Contact Limit Exceeded',
         `Free users can call up to 200 contacts. Upgrade to Pro to call up to 500 contacts.`
       );
       return;
@@ -109,7 +104,7 @@ export default function CallingScreen() {
   };
 
   const handleEndCall = () => {
-    if (Platform.OS !== "web") {
+    if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
     endCall();
@@ -117,31 +112,31 @@ export default function CallingScreen() {
 
   const getCallStatusColor = (status: CallStatus) => {
     switch (status) {
-      case "calling":
-        return "bg-warning";
-      case "connected":
-        return "bg-success";
-      case "completed":
-        return "bg-secondary";
-      case "failed":
-        return "bg-error";
+      case 'calling':
+        return 'bg-warning';
+      case 'connected':
+        return 'bg-success';
+      case 'completed':
+        return 'bg-secondary';
+      case 'failed':
+        return 'bg-error';
       default:
-        return "bg-gray-400";
+        return 'bg-gray-400';
     }
   };
 
   const getCallStatusText = (status: CallStatus) => {
     switch (status) {
-      case "calling":
-        return "Calling...";
-      case "connected":
-        return "Connected";
-      case "completed":
-        return "Completed";
-      case "failed":
-        return "Failed";
+      case 'calling':
+        return 'Calling...';
+      case 'connected':
+        return 'Connected';
+      case 'completed':
+        return 'Completed';
+      case 'failed':
+        return 'Failed';
       default:
-        return "Ready";
+        return 'Ready';
     }
   };
 
@@ -160,9 +155,7 @@ export default function CallingScreen() {
 
   const toggleContactSelection = (contact: Contact) => {
     if (selectedContacts.some((c: Contact) => c.id === contact.id)) {
-      setSelectedContacts(
-        selectedContacts.filter((c: Contact) => c.id !== contact.id)
-      );
+      setSelectedContacts(selectedContacts.filter((c: Contact) => c.id !== contact.id));
     } else {
       setSelectedContacts([...selectedContacts, contact]);
     }
@@ -181,13 +174,8 @@ export default function CallingScreen() {
     setIsRecording(true);
     setTimeout(() => {
       setIsRecording(false);
-      setRecordedMessage(
-        "This is a pre-recorded message. Thank you for your attention!"
-      );
-      Alert.alert(
-        "Message Recorded",
-        "Your message has been recorded successfully."
-      );
+      setRecordedMessage('This is a pre-recorded message. Thank you for your attention!');
+      Alert.alert('Message Recorded', 'Your message has been recorded successfully.');
     }, 2000);
   };
 
@@ -196,9 +184,7 @@ export default function CallingScreen() {
       <View className="flex-1 bg-background">
         <View className="px-5 pt-14 pb-4">
           <Text className="text-2xl font-bold text-dark">Calling</Text>
-          <Text className="text-gray-500">
-            {currentCall.groupName || "Custom Call"}
-          </Text>
+          <Text className="text-gray-500">{currentCall.groupName || 'Custom Call'}</Text>
         </View>
 
         <View className="flex-1 justify-center items-center px-6">
@@ -207,28 +193,16 @@ export default function CallingScreen() {
           </View>
 
           <Text className="text-2xl font-bold text-center mb-2">Shahil</Text>
-          <Text className="text-gray-500 text-lg text-center mb-6">
-            9846786928
-          </Text>
+          <Text className="text-gray-500 text-lg text-center mb-6">9846786928</Text>
 
-          <View
-            className={`${getCallStatusColor(
-              currentCall.status
-            )} px-4 py-2 rounded-full mb-8`}
-          >
-            <Text className="text-white font-medium">
-              {getCallStatusText(currentCall.status)}
-            </Text>
+          <View className={`${getCallStatusColor(currentCall.status)} px-4 py-2 rounded-full mb-8`}>
+            <Text className="text-white font-medium">{getCallStatusText(currentCall.status)}</Text>
           </View>
 
-          {currentCall.status === "connected" && currentCall.message && (
+          {currentCall.status === 'connected' && currentCall.message && (
             <View className="bg-white rounded-lg p-4 mb-8 w-full">
-              <Text className="text-gray-500 mb-2 text-center">
-                Your message:
-              </Text>
-              <Text className="text-dark text-center">
-                {currentCall.message}
-              </Text>
+              <Text className="text-gray-500 mb-2 text-center">Your message:</Text>
+              <Text className="text-dark text-center">{currentCall.message}</Text>
             </View>
           )}
 
@@ -236,15 +210,12 @@ export default function CallingScreen() {
             <View
               className="bg-primary h-2 rounded-full"
               style={{
-                width: `${
-                  (currentCall.currentIndex / currentCall.contacts.length) * 100
-                }%`,
+                width: `${(currentCall.currentIndex / currentCall.contacts.length) * 100}%`,
               }}
             />
           </View>
           <Text className="text-gray-500 mb-8">
-            {currentCall.currentIndex + 1} of {currentCall.contacts.length}{" "}
-            contacts
+            {currentCall.currentIndex + 1} of {currentCall.contacts.length} contacts
           </Text>
 
           <TouchableOpacity
@@ -268,22 +239,14 @@ export default function CallingScreen() {
       <ScrollView className="px-5">
         <View className="mb-6">
           <Text className="text-lg font-bold text-dark mb-3">Select Group</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-4"
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
             <TouchableOpacity
               className={`mr-3 py-2 px-4 rounded-lg ${
-                selectedGroup === null ? "bg-primary" : "bg-gray-200"
+                selectedGroup === null ? 'bg-primary' : 'bg-gray-200'
               }`}
               onPress={() => handleGroupSelect(null)}
             >
-              <Text
-                className={
-                  selectedGroup === null ? "text-white" : "text-gray-700"
-                }
-              >
+              <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
                 Custom
               </Text>
             </TouchableOpacity>
@@ -292,15 +255,11 @@ export default function CallingScreen() {
               <TouchableOpacity
                 key={group.id}
                 className={`mr-3 py-2 px-4 rounded-lg ${
-                  selectedGroup === group.id ? "bg-primary" : "bg-gray-200"
+                  selectedGroup === group.id ? 'bg-primary' : 'bg-gray-200'
                 }`}
                 onPress={() => handleGroupSelect(group.id)}
               >
-                <Text
-                  className={
-                    selectedGroup === group.id ? "text-white" : "text-gray-700"
-                  }
-                >
+                <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
                   {group.name}
                 </Text>
               </TouchableOpacity>
@@ -310,13 +269,9 @@ export default function CallingScreen() {
 
         <View className="mb-6">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-lg font-bold text-dark">
-              Selected Contacts
-            </Text>
+            <Text className="text-lg font-bold text-dark">Selected Contacts</Text>
             <TouchableOpacity onPress={() => setIsSelectingContacts(true)}>
-              <Text className="text-secondary">
-                {selectedGroup ? "Change" : "Select"}
-              </Text>
+              <Text className="text-secondary">{selectedGroup ? 'Change' : 'Select'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -326,24 +281,20 @@ export default function CallingScreen() {
                 {selectedContacts.length} contacts selected
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {selectedContacts
-                  .slice(0, 5)
-                  .map((contact: Contact, index: number) => (
-                    <View key={contact.id} className="items-center mr-4">
-                      <View className="bg-primary/10 w-12 h-12 rounded-full items-center justify-center mb-1">
-                        <Icon name="user" size={24} color="#1E3A8A" />
-                      </View>
-                      <Text className="text-dark text-xs" numberOfLines={1}>
-                        {contact.name}
-                      </Text>
+                {selectedContacts.slice(0, 5).map((contact: Contact, index: number) => (
+                  <View key={contact.id} className="items-center mr-4">
+                    <View className="bg-primary/10 w-12 h-12 rounded-full items-center justify-center mb-1">
+                      <Icon name="user" size={24} color="#1E3A8A" />
                     </View>
-                  ))}
+                    <Text className="text-dark text-xs" numberOfLines={1}>
+                      {contact.name}
+                    </Text>
+                  </View>
+                ))}
                 {selectedContacts.length > 5 && (
                   <View className="items-center">
                     <View className="bg-gray-200 w-12 h-12 rounded-full items-center justify-center mb-1">
-                      <Text className="font-bold">
-                        +{selectedContacts.length - 5}
-                      </Text>
+                      <Text className="font-bold">+{selectedContacts.length - 5}</Text>
                     </View>
                     <Text className="text-dark text-xs">More</Text>
                   </View>
@@ -353,8 +304,7 @@ export default function CallingScreen() {
           ) : (
             <View className="bg-white rounded-lg p-6 items-center">
               <Text className="text-gray-500 text-center mb-4">
-                No contacts selected. Select a group or add contacts
-                individually.
+                No contacts selected. Select a group or add contacts individually.
               </Text>
               <TouchableOpacity
                 className="bg-secondary py-2 px-4 rounded-lg"
@@ -374,26 +324,18 @@ export default function CallingScreen() {
                 <View className="mb-4">
                   <TouchableOpacity
                     className={`bg-gray-100 p-4 rounded-lg flex-row items-center justify-between ${
-                      isRecording ? "bg-error/10" : ""
+                      isRecording ? 'bg-error/10' : ''
                     }`}
                     onPress={handleRecordMessage}
                   >
-                    <Text
-                      className={`${
-                        isRecording ? "text-error" : "text-gray-700"
-                      } font-medium`}
-                    >
+                    <Text className={`${isRecording ? 'text-error' : 'text-gray-700'} font-medium`}>
                       {isRecording
-                        ? "Recording..."
+                        ? 'Recording...'
                         : recordedMessage
-                        ? "Re-record Message"
-                        : "Record Voice Message"}
+                        ? 'Re-record Message'
+                        : 'Record Voice Message'}
                     </Text>
-                    <Icon
-                      name="microphone"
-                      size={20}
-                      color={isRecording ? "#EF4444" : "#64748b"}
-                    />
+                    <Icon name="microphone" size={20} color={isRecording ? '#EF4444' : '#64748b'} />
                   </TouchableOpacity>
                 </View>
 
@@ -403,8 +345,8 @@ export default function CallingScreen() {
                   </View>
                 ) : (
                   <Text className="text-gray-500 text-sm">
-                    Pro users can record a voice message that will be played
-                    automatically to each contact.
+                    Pro users can record a voice message that will be played automatically to each
+                    contact.
                   </Text>
                 )}
               </View>
@@ -417,12 +359,12 @@ export default function CallingScreen() {
                   onChangeText={setMessage}
                   multiline
                   numberOfLines={4}
-                  style={{ height: 100, textAlignVertical: "top" }}
+                  style={{ height: 100, textAlignVertical: 'top' }}
                 />
                 <Text className="text-gray-500 text-sm mt-2">
                   Free users will speak this message live during each call.
-                  <Text className="text-secondary"> Upgrade to Pro</Text> to use
-                  automated message playback.
+                  <Text className="text-secondary"> Upgrade to Pro</Text> to use automated message
+                  playback.
                 </Text>
               </View>
             )}
@@ -431,7 +373,7 @@ export default function CallingScreen() {
 
         <TouchableOpacity
           className={`bg-primary rounded-lg py-4 items-center mb-8 ${
-            selectedContacts.length === 0 ? "opacity-50" : ""
+            selectedContacts.length === 0 ? 'opacity-50' : ''
           }`}
           onPress={handleStartCall}
           disabled={selectedContacts.length === 0}
@@ -464,9 +406,7 @@ export default function CallingScreen() {
               <TouchableOpacity
                 key={contact.id}
                 className={`py-3 flex-row items-center justify-between border-b border-gray-100 ${
-                  selectedContacts.some((c: Contact) => c.id === contact.id)
-                    ? "bg-primary/5"
-                    : ""
+                  selectedContacts.some((c: Contact) => c.id === contact.id) ? 'bg-primary/5' : ''
                 }`}
                 onPress={() => toggleContactSelection(contact)}
               >
@@ -476,9 +416,7 @@ export default function CallingScreen() {
                   </View>
                   <View>
                     <Text className="font-medium">{contact.name}</Text>
-                    <Text className="text-gray-500 text-sm">
-                      {contact.phoneNumber}
-                    </Text>
+                    <Text className="text-gray-500 text-sm">{contact.phoneNumber}</Text>
                   </View>
                 </View>
 

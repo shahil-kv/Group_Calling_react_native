@@ -1,6 +1,4 @@
-import { useContactStore } from "@/stores/contactStore";
-import { useGroupStore } from "@/stores/groupStore";
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -12,21 +10,23 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useContactStore } from '../../stores/contactStore';
+import { useGroupStore } from '../../stores/groupStore';
 
 export default function GroupsScreen() {
   const { groups, addGroup, updateGroup, deleteGroup } = useGroupStore();
   const { contacts } = useContactStore();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
-  const [groupName, setGroupName] = useState("");
-  const [description, setDescription] = useState("");
+  const [groupName, setGroupName] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [showContactSelector, setShowContactSelector] = useState(false);
-  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
 
   const filteredGroups = groups.filter((group: any) =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -40,7 +40,7 @@ export default function GroupsScreen() {
 
   const handleAddGroup = () => {
     if (!groupName.trim()) {
-      Alert.alert("Error", "Group name is required");
+      Alert.alert('Error', 'Group name is required');
       return;
     }
 
@@ -68,34 +68,32 @@ export default function GroupsScreen() {
 
     setCurrentGroupId(groupId);
     setGroupName(group.name);
-    setDescription(group.description || "");
+    setDescription(group.description || '');
     setSelectedContactIds(group.contacts.map((c: any) => c.id));
     setIsEditing(true);
     setModalVisible(true);
   };
 
   const handleDeleteGroup = (id: string) => {
-    Alert.alert("Delete Group", "Are you sure you want to delete this group?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteGroup(id) },
+    Alert.alert('Delete Group', 'Are you sure you want to delete this group?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteGroup(id) },
     ]);
   };
 
   const clearForm = () => {
-    setGroupName("");
-    setDescription("");
+    setGroupName('');
+    setDescription('');
     setSelectedContactIds([]);
     setCurrentGroupId(null);
     setIsEditing(false);
     setShowContactSelector(false);
-    setContactSearchQuery("");
+    setContactSearchQuery('');
   };
 
   const toggleContactSelection = (contactId: string) => {
-    setSelectedContactIds((prev) =>
-      prev.includes(contactId)
-        ? prev.filter((id) => id !== contactId)
-        : [...prev, contactId]
+    setSelectedContactIds(prev =>
+      prev.includes(contactId) ? prev.filter(id => id !== contactId) : [...prev, contactId]
     );
   };
 
@@ -116,7 +114,7 @@ export default function GroupsScreen() {
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Icon name="close" size={18} color="#64748b" />
             </TouchableOpacity>
           ) : null}
@@ -139,7 +137,7 @@ export default function GroupsScreen() {
       {filteredGroups.length > 0 ? (
         <FlatList
           data={filteredGroups}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -153,15 +151,13 @@ export default function GroupsScreen() {
                   </View>
                   <View className="flex-1 ml-3">
                     <Text className="font-medium text-dark">{item.name}</Text>
-                    <Text className="text-gray-500">
-                      {item.contacts.length} contacts
-                    </Text>
+                    <Text className="text-gray-500">{item.contacts.length} contacts</Text>
                   </View>
                 </View>
                 <View className="flex-row items-center">
                   <TouchableOpacity
                     className="p-2 mr-2"
-                    onPress={(e) => {
+                    onPress={e => {
                       e.stopPropagation();
                       handleEditGroup(item.id);
                     }}
@@ -170,7 +166,7 @@ export default function GroupsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     className="p-2 mr-2"
-                    onPress={(e) => {
+                    onPress={e => {
                       e.stopPropagation();
                       handleDeleteGroup(item.id);
                     }}
@@ -181,9 +177,7 @@ export default function GroupsScreen() {
                 </View>
               </View>
               {item.description ? (
-                <Text className="mt-2 text-gray-500 pl-13">
-                  {item.description}
-                </Text>
+                <Text className="mt-2 text-gray-500 pl-13">{item.description}</Text>
               ) : null}
             </TouchableOpacity>
           )}
@@ -192,8 +186,8 @@ export default function GroupsScreen() {
         <View className="items-center justify-center flex-1 px-5">
           <Text className="mb-4 text-center text-gray-500">
             {searchQuery
-              ? "No groups match your search"
-              : "You have no groups yet. Create your first group to get started."}
+              ? 'No groups match your search'
+              : 'You have no groups yet. Create your first group to get started.'}
           </Text>
           {!searchQuery && (
             <TouchableOpacity
@@ -220,7 +214,7 @@ export default function GroupsScreen() {
         }}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="justify-end flex-1"
         >
           <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
@@ -228,9 +222,7 @@ export default function GroupsScreen() {
               <View className="flex-1">
                 <View className="flex-row items-center justify-between mb-4">
                   <Text className="text-xl font-bold">Select Contacts</Text>
-                  <TouchableOpacity
-                    onPress={() => setShowContactSelector(false)}
-                  >
+                  <TouchableOpacity onPress={() => setShowContactSelector(false)}>
                     <Icon name="close" size={24} color="#64748b" />
                   </TouchableOpacity>
                 </View>
@@ -245,9 +237,7 @@ export default function GroupsScreen() {
                       onChangeText={setContactSearchQuery}
                     />
                     {contactSearchQuery ? (
-                      <TouchableOpacity
-                        onPress={() => setContactSearchQuery("")}
-                      >
+                      <TouchableOpacity onPress={() => setContactSearchQuery('')}>
                         <Icon name="close" size={18} color="#64748b" />
                       </TouchableOpacity>
                     ) : null}
@@ -264,17 +254,13 @@ export default function GroupsScreen() {
                       <TouchableOpacity
                         key={contact.id}
                         className={`border-b border-gray-100 py-3 px-2 flex-row items-center justify-between ${
-                          selectedContactIds.includes(contact.id)
-                            ? "bg-primary/5"
-                            : ""
+                          selectedContactIds.includes(contact.id) ? 'bg-primary/5' : ''
                         }`}
                         onPress={() => toggleContactSelection(contact.id)}
                       >
                         <View>
                           <Text className="font-medium">{contact.name}</Text>
-                          <Text className="text-sm text-gray-500">
-                            {contact.phoneNumber}
-                          </Text>
+                          <Text className="text-sm text-gray-500">{contact.phoneNumber}</Text>
                         </View>
                         {selectedContactIds.includes(contact.id) && (
                           <View className="items-center justify-center w-6 h-6 rounded-full bg-primary">
@@ -284,9 +270,7 @@ export default function GroupsScreen() {
                       </TouchableOpacity>
                     ))
                   ) : (
-                    <Text className="py-4 text-center text-gray-500">
-                      No contacts found
-                    </Text>
+                    <Text className="py-4 text-center text-gray-500">No contacts found</Text>
                   )}
                 </ScrollView>
 
@@ -301,7 +285,7 @@ export default function GroupsScreen() {
               <View>
                 <View className="flex-row items-center justify-between mb-6">
                   <Text className="text-xl font-bold">
-                    {isEditing ? "Edit Group" : "Create New Group"}
+                    {isEditing ? 'Edit Group' : 'Create New Group'}
                   </Text>
                   <TouchableOpacity
                     onPress={() => {
@@ -315,9 +299,7 @@ export default function GroupsScreen() {
 
                 <View className="mb-6 space-y-4">
                   <View>
-                    <Text className="mb-1 font-medium text-gray-700">
-                      Group Name
-                    </Text>
+                    <Text className="mb-1 font-medium text-gray-700">Group Name</Text>
                     <TextInput
                       className="px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       placeholder="Enter group name"
@@ -327,9 +309,7 @@ export default function GroupsScreen() {
                   </View>
 
                   <View>
-                    <Text className="mb-1 font-medium text-gray-700">
-                      Description (Optional)
-                    </Text>
+                    <Text className="mb-1 font-medium text-gray-700">Description (Optional)</Text>
                     <TextInput
                       className="px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       placeholder="Enter description"
@@ -337,28 +317,22 @@ export default function GroupsScreen() {
                       onChangeText={setDescription}
                       multiline
                       numberOfLines={3}
-                      style={{ height: 80, textAlignVertical: "top" }}
+                      style={{ height: 80, textAlignVertical: 'top' }}
                     />
                   </View>
 
                   <View>
-                    <Text className="mb-1 font-medium text-gray-700">
-                      Add Contacts
-                    </Text>
+                    <Text className="mb-1 font-medium text-gray-700">Add Contacts</Text>
                     <TouchableOpacity
                       className="flex-row items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       onPress={() => setShowContactSelector(true)}
                     >
                       <Text
-                        className={
-                          selectedContactIds.length > 0
-                            ? "text-dark"
-                            : "text-gray-400"
-                        }
+                        className={selectedContactIds.length > 0 ? 'text-dark' : 'text-gray-400'}
                       >
                         {selectedContactIds.length > 0
                           ? `${selectedContactIds.length} contacts selected`
-                          : "Select contacts"}
+                          : 'Select contacts'}
                       </Text>
                       <Icon name="plus" size={18} color="#64748b" />
                     </TouchableOpacity>
@@ -370,7 +344,7 @@ export default function GroupsScreen() {
                   onPress={handleAddGroup}
                 >
                   <Text className="text-lg font-bold text-white">
-                    {isEditing ? "Update Group" : "Create Group"}
+                    {isEditing ? 'Update Group' : 'Create Group'}
                   </Text>
                 </TouchableOpacity>
               </View>

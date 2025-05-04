@@ -1,19 +1,19 @@
 // DynamicForm.tsx
-import { DynamicField, FormFieldsProps } from "@/types/dynamic-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import React from "react";
-import { Controller, useForm } from "react-hook-form";
-import { Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { yupResolver } from '@hookform/resolvers/yup';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { DynamicField, FormFieldsProps } from '../types/dynamic-form';
 
 const getKeyboardType = (type: string) => {
   switch (type) {
-    case "number":
-      return "numeric";
-    case "email":
-      return "email-address";
+    case 'number':
+      return 'numeric';
+    case 'email':
+      return 'email-address';
     default:
-      return "default";
+      return 'default';
   }
 };
 
@@ -40,11 +40,7 @@ const PasswordInput: React.FC<{
         onPress={() => setShowPassword(!showPassword)}
         className="absolute right-3 top-3"
       >
-        <Icon
-          name={showPassword ? "eye-slash" : "eye"}
-          size={20}
-          color="gray"
-        />
+        <Icon name={showPassword ? 'eye-slash' : 'eye'} size={20} color="gray" />
       </TouchableOpacity>
     </View>
   );
@@ -56,16 +52,16 @@ const PhoneInput: React.FC<{
   placeholder?: string;
   maxLength?: number;
   defaultCode?: string;
-}> = ({ value, onChange, placeholder, maxLength, defaultCode = "+91" }) => {
+}> = ({ value, onChange, placeholder, maxLength, defaultCode = '+91' }) => {
   const [countryCode, setCountryCode] = React.useState(defaultCode);
   const [showCountryPicker, setShowCountryPicker] = React.useState(false);
 
   const commonCountryCodes = [
-    { code: "+91", country: "India" },
-    { code: "+1", country: "USA" },
-    { code: "+44", country: "UK" },
-    { code: "+86", country: "China" },
-    { code: "+81", country: "Japan" },
+    { code: '+91', country: 'India' },
+    { code: '+1', country: 'USA' },
+    { code: '+44', country: 'UK' },
+    { code: '+86', country: 'China' },
+    { code: '+81', country: 'Japan' },
   ];
 
   return (
@@ -93,7 +89,7 @@ const PhoneInput: React.FC<{
       >
         <View className="items-center justify-center flex-1 bg-black/50">
           <View className="w-4/5 p-4 bg-white rounded-lg">
-            {commonCountryCodes.map((item) => (
+            {commonCountryCodes.map(item => (
               <TouchableOpacity
                 key={item.code}
                 onPress={() => {
@@ -123,14 +119,14 @@ const PhoneInput: React.FC<{
 const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
   return (
     <View className="w-full">
-      {fields.map((field) => (
+      {fields.map(field => (
         <View key={field.name} className="mb-4">
           <Text className="mb-2 font-medium text-gray-700">{field.label}</Text>
           <Controller
             control={control}
             name={field.name}
             render={({ field: { onChange, value } }) => {
-              if (field.type === "password") {
+              if (field.type === 'password') {
                 return (
                   <PasswordInput
                     value={value}
@@ -139,7 +135,7 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
                     maxLength={field.maxLength}
                   />
                 );
-              } else if (field.type === "phone") {
+              } else if (field.type === 'phone') {
                 return (
                   <PhoneInput
                     value={value}
@@ -164,9 +160,7 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
             }}
           />
           {errors[field.name] && (
-            <Text className="mt-1 text-sm text-error">
-              {String(errors[field.name]?.message)}
-            </Text>
+            <Text className="mt-1 text-sm text-error">{String(errors[field.name]?.message)}</Text>
           )}
         </View>
       ))}
@@ -180,13 +174,7 @@ export const DynamicForm: React.FC<{
   defaultValues?: any;
   validationSchema?: any;
   renderButton?: (handleSubmit: () => void) => React.ReactNode;
-}> = ({
-  fields,
-  onSubmit,
-  defaultValues = {},
-  validationSchema,
-  renderButton,
-}) => {
+}> = ({ fields, onSubmit, defaultValues = {}, validationSchema, renderButton }) => {
   const {
     control,
     handleSubmit,

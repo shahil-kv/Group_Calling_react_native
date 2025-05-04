@@ -1,7 +1,7 @@
-import { Contact } from "@/stores/contactStore";
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { Contact } from '../stores/contactStore';
 
 interface ContactCardProps {
   contact: Contact;
@@ -26,8 +26,8 @@ export default function ContactCard({
     <TouchableOpacity
       className={`
         bg-white rounded-lg p-4 mb-3 shadow-sm 
-        ${selectable ? "active:bg-gray-100" : ""}
-        ${selected ? "bg-primary/5 border border-primary" : ""}
+        ${selectable ? 'active:bg-gray-100' : ''}
+        ${selected ? 'bg-primary/5 border border-primary' : ''}
       `}
       onPress={selectable ? onSelect : undefined}
     >
@@ -39,17 +39,12 @@ export default function ContactCard({
           <View className="ml-3 flex-1">
             <Text className="font-medium text-dark">{contact.name}</Text>
             <Text className="text-gray-500">{contact.phoneNumber}</Text>
-            {contact.email && (
-              <Text className="text-gray-500 text-xs">{contact.email}</Text>
-            )}
+            {contact.email && <Text className="text-gray-500 text-xs">{contact.email}</Text>}
           </View>
         </View>
         <View className="flex-row">
           {onCall && (
-            <TouchableOpacity
-              className="mr-4 p-2 bg-primary/10 rounded-full"
-              onPress={onCall}
-            >
+            <TouchableOpacity className="mr-4 p-2 bg-primary/10 rounded-full" onPress={onCall}>
               <Icon name="phone" size={16} color="#1E3A8A" />
             </TouchableOpacity>
           )}

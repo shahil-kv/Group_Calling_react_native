@@ -1,6 +1,4 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserStore } from "@/stores/userStore";
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -11,8 +9,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useAuth } from '../../contexts/AuthContext';
+import { useUserStore } from '../../stores/userStore';
 
 export default function SettingsScreen() {
   const { signOut } = useAuth();
@@ -22,32 +22,32 @@ export default function SettingsScreen() {
   const [showTerms, setShowTerms] = useState(false);
 
   const handleUpgrade = () => {
-    Alert.alert("Upgrade to Pro", "Choose your subscription plan:", [
+    Alert.alert('Upgrade to Pro', 'Choose your subscription plan:', [
       {
-        text: "Cancel",
-        style: "cancel",
+        text: 'Cancel',
+        style: 'cancel',
       },
       {
-        text: "Monthly (₹499/month)",
+        text: 'Monthly (₹499/month)',
         onPress: () => {
-          upgradeToPro("monthly")
+          upgradeToPro('monthly')
             .then(() => {
-              Alert.alert("Success", "You have been upgraded to Pro!");
+              Alert.alert('Success', 'You have been upgraded to Pro!');
             })
             .catch((error: any) => {
-              Alert.alert("Error", "Failed to upgrade. Please try again.");
+              Alert.alert('Error', 'Failed to upgrade. Please try again.');
             });
         },
       },
       {
-        text: "Yearly (₹4,999/year)",
+        text: 'Yearly (₹4,999/year)',
         onPress: () => {
-          upgradeToPro("yearly")
+          upgradeToPro('yearly')
             .then(() => {
-              Alert.alert("Success", "You have been upgraded to Pro!");
+              Alert.alert('Success', 'You have been upgraded to Pro!');
             })
             .catch((error: any) => {
-              Alert.alert("Error", "Failed to upgrade. Please try again.");
+              Alert.alert('Error', 'Failed to upgrade. Please try again.');
             });
         },
       },
@@ -58,7 +58,7 @@ export default function SettingsScreen() {
     try {
       await signOut();
     } catch (error) {
-      console.error("Signout error:", error);
+      console.error('Signout error:', error);
     }
   };
 
@@ -69,17 +69,13 @@ export default function SettingsScreen() {
         <View className="p-6">
           <View className="mb-8">
             <Text className="mb-2 text-2xl font-bold text-dark">Settings</Text>
-            <Text className="text-gray-500">
-              Manage your account and preferences
-            </Text>
+            <Text className="text-gray-500">Manage your account and preferences</Text>
           </View>
 
           <View className="space-y-6">
             {/* Account Section */}
             <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">
-                Account
-              </Text>
+              <Text className="mb-4 text-lg font-semibold text-dark">Account</Text>
               <View className="p-4 space-y-4 bg-white rounded-lg">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700">Email</Text>
@@ -87,10 +83,8 @@ export default function SettingsScreen() {
                 </View>
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700">Subscription</Text>
-                  <Text
-                    className={user?.isPro ? "text-green-500" : "text-gray-500"}
-                  >
-                    {user?.isPro ? "Pro" : "Free"}
+                  <Text className={user?.isPro ? 'text-green-500' : 'text-gray-500'}>
+                    {user?.isPro ? 'Pro' : 'Free'}
                   </Text>
                 </View>
                 {!user?.isPro && (
@@ -98,9 +92,7 @@ export default function SettingsScreen() {
                     className="items-center py-3 rounded-lg bg-primary"
                     onPress={handleUpgrade}
                   >
-                    <Text className="font-medium text-white">
-                      Upgrade to Pro
-                    </Text>
+                    <Text className="font-medium text-white">Upgrade to Pro</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -108,17 +100,15 @@ export default function SettingsScreen() {
 
             {/* Notifications Section */}
             <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">
-                Notifications
-              </Text>
+              <Text className="mb-4 text-lg font-semibold text-dark">Notifications</Text>
               <View className="p-4 bg-white rounded-lg">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700">Push Notifications</Text>
                   <Switch
                     value={notifications}
                     onValueChange={setNotifications}
-                    trackColor={{ false: "#767577", true: "#81b0ff" }}
-                    thumbColor={notifications ? "#1E3A8A" : "#f4f3f4"}
+                    trackColor={{ false: '#767577', true: '#81b0ff' }}
+                    thumbColor={notifications ? '#1E3A8A' : '#f4f3f4'}
                   />
                 </View>
               </View>
@@ -126,9 +116,7 @@ export default function SettingsScreen() {
 
             {/* Legal Section */}
             <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">
-                Legal
-              </Text>
+              <Text className="mb-4 text-lg font-semibold text-dark">Legal</Text>
               <View className="p-4 space-y-4 bg-white rounded-lg">
                 <TouchableOpacity
                   onPress={() => setShowPrivacyPolicy(true)}
@@ -175,8 +163,8 @@ export default function SettingsScreen() {
             </View>
             <ScrollView>
               <Text className="text-gray-700">
-                Your privacy is important to us. This Privacy Policy explains
-                how we collect, use, and protect your personal information...
+                Your privacy is important to us. This Privacy Policy explains how we collect, use,
+                and protect your personal information...
               </Text>
             </ScrollView>
           </View>
@@ -200,8 +188,7 @@ export default function SettingsScreen() {
             </View>
             <ScrollView>
               <Text className="text-gray-700">
-                By using our service, you agree to these terms. Please read them
-                carefully...
+                By using our service, you agree to these terms. Please read them carefully...
               </Text>
             </ScrollView>
           </View>

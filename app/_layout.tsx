@@ -1,18 +1,14 @@
-import { AuthProvider } from "@/contexts/AuthContext";
-import { LoaderProvider } from "@/contexts/LoaderContext";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useFonts } from "expo-font";
-import { SplashScreen, Stack, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Toast from "react-native-toast-message";
-import "../global.css";
+import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
+import { SplashScreen, Stack, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
+import { AuthProvider } from '../contexts/AuthContext';
+import { LoaderProvider } from '../contexts/LoaderContext';
+import '../global.css';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -33,7 +29,7 @@ export default function RootLayout() {
 
   // Handle framework ready state
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       window.frameworkReady = () => setIsFrameworkReady(true);
     }
   }, []);
@@ -49,7 +45,7 @@ export default function RootLayout() {
   // Handle navigation after everything is ready
   useEffect(() => {
     if (isReady && isFrameworkReady) {
-      router.replace("/(auth)/signup");
+      router.replace('/(auth)/signup');
     }
   }, [isReady, isFrameworkReady, router]);
 
