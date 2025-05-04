@@ -43,8 +43,6 @@ export default function LoginScreen() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      console.log(data);
-
       await signIn(data.phoneNumber, data.password);
       router.replace("/(tabs)");
     } catch (error) {

@@ -1,16 +1,44 @@
-import {
-  ApiResponse,
-  AuthContextType,
-  AuthTokens,
-  LoginResponse,
-  PremiumStatusResponse,
-  RefreshTokenResponse,
-  User,
-} from "@/types/authContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import {
+  AUTH_CONFIG,
+  ApiResponse,
+  PremiumStatusResponse,
+  User,
+} from "../config/auth.config";
 import { usePost } from "../hooks/useApi";
+
+interface LoginResponse {
+  user: User;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
+interface RefreshTokenResponse {
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
+  user?: User;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  signIn: (phoneNumber: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  checkPremiumStatus: () => Promise<void>;
+  upgradeToPremium: (plan: "monthly" | "yearly") => Promise<void>;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -18,7 +46,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const { mutateAsync: login } = usePost<ApiResponse<LoginResponse>>(
@@ -35,12 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     ApiResponse<RefreshTokenResponse>
   >("/user/refresh-token", {
     invalidateQueriesOnSuccess: ["users", "auth"],
-    showErrorToast: true,
+    showErrorToast: false,
     showSuccessToast: false,
     showLoader: false,
   });
 
-  const { mutateAsync: logout } = usePost<ApiResponse<null>>("/user/logout", {
+  const { mutateAsync: logout } = usePost<ApiResponse<null>>("user/logout", {
     invalidateQueriesOnSuccess: ["users", "auth"],
     showErrorToast: true,
     showSuccessToast: true,
@@ -65,49 +92,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     showLoader: true,
   });
 
-  useEffect(() => {
-    loadStoredAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadStoredAuth = async () => {
+  const loadStoredAuth = useCallback(async () => {
     try {
-      const storedTokens = await AsyncStorage.getItem("auth_tokens");
-      const storedUser = await AsyncStorage.getItem("auth_user");
+      // First check if we have stored tokens
+      const storedRefreshToken = await AsyncStorage.getItem("refresh_token");
+      console.log(
+        "Checking auth state, refresh token:",
+        storedRefreshToken ? "exists" : "not found"
+      );
 
-      if (storedTokens && storedUser) {
-        const parsedTokens = JSON.parse(storedTokens);
-        const parsedUser = JSON.parse(storedUser);
-
-        setTokens(parsedTokens);
-        setUser(parsedUser);
-
-        // Check if access token is expired
-        const tokenData = JSON.parse(
-          atob(parsedTokens.accessToken.split(".")[1])
-        );
-        if (tokenData.exp * 1000 < Date.now()) {
-          await refreshAccessToken();
-        }
+      if (!storedRefreshToken) {
+        console.log("No refresh token, clearing user and redirecting to login");
+        setUser(null);
+        // Force navigation to login regardless of current route
+        router.replace(AUTH_CONFIG.ROUTES.LOGIN);
+        return;
       }
-    } catch (error) {
-      console.error("Error loading stored auth:", error);
+
+      try {
+        console.log("Attempting to refresh token");
+        const response = await refreshToken({
+          refreshToken: storedRefreshToken,
+        });
+        const { tokens } = response.data;
+
+        // Store new tokens
+        await AsyncStorage.setItem("access_token", tokens.accessToken);
+        await AsyncStorage.setItem("refresh_token", tokens.refreshToken);
+
+        // Get user data from the response if available, or keep existing user
+        if (response.data.user) {
+          setUser(response.data.user);
+        }
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        // Clear everything and force login
+        setUser(null);
+        await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+        router.replace(AUTH_CONFIG.ROUTES.LOGIN);
+      }
+    } catch (error: any) {
+      console.error("Auth check failed:", error);
+      // Clear everything and force login
+      setUser(null);
+      await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+      router.replace(AUTH_CONFIG.ROUTES.LOGIN);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [refreshToken]);
 
   const signIn = async (phoneNumber: string, password: string) => {
     try {
       const response = await login({ phoneNumber, password });
+
       const { user, tokens } = response.data;
 
-      await AsyncStorage.setItem("auth_tokens", JSON.stringify(tokens));
-      await AsyncStorage.setItem("auth_user", JSON.stringify(user));
+      // Store both tokens
+      await AsyncStorage.setItem("access_token", tokens.accessToken);
+      await AsyncStorage.setItem("refresh_token", tokens.refreshToken);
 
       setUser(user);
-      setTokens(tokens);
-      router.replace("/(tabs)");
+      router.replace(AUTH_CONFIG.ROUTES.TABS);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -116,37 +162,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signOut = async () => {
     try {
-      if (tokens?.accessToken) {
-        await logout({});
-      }
+      // First try to call logout API
+      await logout({});
     } catch (error) {
       console.error("Logout API error:", error);
     } finally {
-      await AsyncStorage.removeItem("auth_tokens");
-      await AsyncStorage.removeItem("auth_user");
-      setUser(null);
-      setTokens(null);
-      router.replace("/(auth)/login");
-    }
-  };
+      try {
+        // Clear all stored data
+        await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
 
-  const refreshAccessToken = async () => {
-    try {
-      if (!tokens?.refreshToken) {
-        throw new Error("No refresh token available");
+        // Clear user state
+        setUser(null);
+
+        // Force navigation to login
+        router.replace(AUTH_CONFIG.ROUTES.LOGIN);
+      } catch (cleanupError) {
+        console.error("Error during cleanup:", cleanupError);
+        // Even if cleanup fails, try to redirect to login
+        router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       }
-
-      const response = await refreshToken({
-        refreshToken: tokens.refreshToken,
-      });
-      const { tokens: newTokens } = response.data;
-
-      await AsyncStorage.setItem("auth_tokens", JSON.stringify(newTokens));
-      setTokens(newTokens);
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      await signOut();
-      throw error;
     }
   };
 
@@ -188,15 +222,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Only check auth on initial load
+  useEffect(() => {
+    loadStoredAuth();
+  }, [loadStoredAuth]);
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        tokens,
         isLoading,
         signIn,
         signOut,
-        refreshAccessToken,
         checkPremiumStatus,
         upgradeToPremium,
       }}

@@ -1,38 +1,41 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
     _retry?: boolean;
 }
 
-let isRefreshing = false;
-let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void }[] = [];
+export const setupAuthInterceptor = (instance: AxiosInstance) => {
+    let isRefreshing = false;
+    let failedQueue: any[] = [];
 
-const processQueue = (error: any = null) => {
-    failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve();
+    const processQueue = (error: any = null, token: string | null = null) => {
+        failedQueue.forEach(prom => {
+            if (error) {
+                prom.reject(error);
+            } else {
+                prom.resolve(token);
+            }
+        });
+        failedQueue = [];
+    };
+
+    instance.interceptors.request.use(
+        async (config) => {
+            // No need to manually set Authorization header
+            // The browser will automatically send cookies
+            return config;
+        },
+        (error) => {
+            return Promise.reject(error);
         }
-    });
-    failedQueue = [];
-};
-
-export const createAxiosInstance = (baseURL: string): AxiosInstance => {
-    const instance = axios.create({
-        baseURL,
-        withCredentials: true,
-    });
+    );
 
     instance.interceptors.response.use(
         (response) => response,
         async (error: AxiosError) => {
             const originalRequest = error.config as CustomAxiosRequestConfig;
-            if (!originalRequest) {
-                return Promise.reject(error);
-            }
 
-            if (originalRequest.url?.includes('/login') || originalRequest.url?.includes('/refresh-token')) {
+            if (!originalRequest) {
                 return Promise.reject(error);
             }
 
@@ -53,11 +56,12 @@ export const createAxiosInstance = (baseURL: string): AxiosInstance => {
                 isRefreshing = true;
 
                 try {
-                    await instance.post('/user/refresh-token');
-                    processQueue();
+                    // The refresh token will be sent automatically via cookie
+                    await instance.post("/user/refresh-token");
+                    processQueue(null, null);
                     return instance(originalRequest);
                 } catch (refreshError) {
-                    processQueue(refreshError);
+                    processQueue(refreshError, null);
                     return Promise.reject(refreshError);
                 } finally {
                     isRefreshing = false;
@@ -67,6 +71,4 @@ export const createAxiosInstance = (baseURL: string): AxiosInstance => {
             return Promise.reject(error);
         }
     );
-
-    return instance;
 }; 
