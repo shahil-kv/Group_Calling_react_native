@@ -1,9 +1,15 @@
+import ActiveCallScreen from '@/components/ActiveCallScreen';
+import ContactSelector from '@/components/ContactSelector';
 import { useAuth } from '@/contexts/AuthContext';
+import { CallStatus, useCallStore } from '@/stores/callStore';
+import { Contact, useContactStore } from '@/stores/contactStore';
+import { useGroupStore } from '@/stores/groupStore';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Animated,
+  Modal,
   PermissionsAndroid,
   Platform,
   ScrollView,
@@ -14,11 +20,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import ActiveCallScreen from '../../components/ActiveCallScreen';
-import ContactSelectionModal from '../../components/ContactSelectionModal';
-import { CallStatus, useCallStore } from '../../stores/callStore';
-import { Contact, useContactStore } from '../../stores/contactStore';
-import { useGroupStore } from '../../stores/groupStore';
 
 interface Group {
   id: string;
@@ -36,7 +37,6 @@ const mockInitiateCall = (phoneNumber: string): Promise<void> => {
     }, 500);
   });
 };
-
 export default function CallingScreen() {
   const { user } = useAuth();
   const { groups } = useGroupStore();
@@ -49,6 +49,7 @@ export default function CallingScreen() {
   const [recordedMessage, setRecordedMessage] = useState('');
   const [showTutorial, setShowTutorial] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isCallActive = currentCall.status !== 'idle';
   const currentContact = isCallActive && currentCall.contacts[currentCall.currentIndex];
@@ -299,7 +300,7 @@ export default function CallingScreen() {
           <View className="gap-4 px-4 space-y-4">
             {/* Group Selection */}
             <View className="p-4 bg-white rounded-lg shadow-sm">
-              <View className="flex-row items-center mb-3 ">
+              <View className="flex-row items-center mb-3">
                 <Icon name="users" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-dark">Select Group</Text>
               </View>
@@ -451,13 +452,26 @@ export default function CallingScreen() {
           </View>
         </ScrollView>
 
-        <ContactSelectionModal
-          isVisible={isSelectingContacts}
-          onClose={() => setIsSelectingContacts(false)}
-          selectedContacts={selectedContacts}
-          onContactSelect={toggleContactSelection}
-          onClearAll={() => setSelectedContacts([])}
-        />
+        <Modal
+          visible={isSelectingContacts}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsSelectingContacts(false)}
+        >
+          <View className="flex-1 bg-black/50">
+            <View className="flex-1 mt-20 bg-white rounded-t-[32px]">
+              <ContactSelector
+                visible={isSelectingContacts}
+                onClose={() => setIsSelectingContacts(false)}
+                onDone={(contacts: any) => {
+                  setSelectedContacts(contacts);
+                  setIsSelectingContacts(false);
+                }}
+                initialSelectedContacts={selectedContacts as any}
+              />
+            </View>
+          </View>
+        </Modal>
       </Animated.View>
     </SafeAreaView>
   );

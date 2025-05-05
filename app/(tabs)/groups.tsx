@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Alert, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import CreateGroupModal from '../../components/CreateGroupModal';
 import { useContactStore } from '../../stores/contactStore';
 import { useGroupStore } from '../../stores/groupStore';
-import CreateGroupModal from '../components/CreateGroupModal';
 
 export default function GroupsScreen() {
   const { groups, addGroup, updateGroup, deleteGroup } = useGroupStore();
@@ -88,10 +88,13 @@ export default function GroupsScreen() {
       {filteredGroups.length > 0 ? (
         <FlatList
           data={filteredGroups}
-          keyExtractor={item => item.id}
+          keyExtractor={item => `group-${item.id}`}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           renderItem={({ item }) => (
-            <TouchableOpacity className="p-4 mb-3 bg-white rounded-lg shadow-sm">
+            <TouchableOpacity
+              key={`group-item-${item.id}`}
+              className="p-4 mb-3 bg-white rounded-lg shadow-sm"
+            >
               <View className="flex-row justify-between">
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-10 h-10 rounded-full bg-primary/10">
