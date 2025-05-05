@@ -109,8 +109,10 @@ export default function SignupScreen() {
   const handleOTPSubmit = async () => {
     try {
       // Simulate OTP verification
+      const phoneNumberCleaned = phoneNumber.replace(/\s+/g, '');
+      console.log('phoneNumber', phoneNumberCleaned);
       await verifyOTP({
-        phoneNumber: phoneNumber,
+        phoneNumber: phoneNumberCleaned,
         otp,
       });
       router.navigate('/(auth)/login');

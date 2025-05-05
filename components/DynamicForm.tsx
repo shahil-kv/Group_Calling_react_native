@@ -87,6 +87,18 @@ const PhoneInput: React.FC<{
     { code: '+81', country: 'Japan' },
   ];
 
+  const handlePhoneChange = (text: string) => {
+    // Remove any existing country code from the input
+    const cleanNumber = text.replace(/^\+\d+/, '');
+    onChange(cleanNumber);
+  };
+
+  // Store the country code in a ref to access it during form submission
+  React.useEffect(() => {
+    // @ts-ignore - Adding custom property to store country code
+    onChange.countryCode = countryCode;
+  }, [countryCode]);
+
   return (
     <View className="flex-row items-center overflow-hidden bg-white border border-gray-300 rounded-lg">
       <TouchableOpacity
@@ -100,7 +112,7 @@ const PhoneInput: React.FC<{
         className="flex-1 p-4"
         placeholder={placeholder}
         value={value}
-        onChangeText={onChange}
+        onChangeText={handlePhoneChange}
         keyboardType="phone-pad"
         maxLength={maxLength}
       />
@@ -165,7 +177,7 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
                     onChange={onChange}
                     placeholder={field.placeholder}
                     maxLength={field.maxLength}
-                    defaultCode={field.defaultCode}
+                    defaultCode="+91"
                   />
                 );
               }
@@ -239,10 +251,23 @@ export const DynamicForm: React.FC<{
     resolver: validationSchema ? yupResolver(validationSchema) : undefined,
   });
 
+  const handleFormSubmit = (data: any) => {
+    // Process phone numbers by concatenating country codes
+    const processedData = { ...data };
+    fields.forEach(field => {
+      if (field.type === 'phone' && data[field.name]) {
+        // @ts-ignore - Accessing the stored country code
+        const countryCode = control._fields[field.name]?.onChange?.countryCode || '+91';
+        processedData[field.name] = `${countryCode}${data[field.name]}`;
+      }
+    });
+    onSubmit(processedData);
+  };
+
   return (
     <View className="w-full">
       <FormFields control={control} fields={fields} errors={errors} />
-      {renderButton?.(handleSubmit(onSubmit))}
+      {renderButton?.(handleSubmit(handleFormSubmit))}
     </View>
   );
 };
