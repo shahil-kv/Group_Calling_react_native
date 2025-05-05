@@ -1,3 +1,5 @@
+import { router } from 'expo-router';
+import 'nativewind';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -5,19 +7,17 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
-  Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useAuth } from '../../contexts/AuthContext';
-import { useUserStore } from '../../stores/userStore';
+
+import Header from '../../components/Header';
+import SettingsItem from '../../components/SettingsItem';
 
 export default function SettingsScreen() {
-  const { signOut } = useAuth();
-  const { user, upgradeToPro } = useUserStore();
-  const [notifications, setNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(true);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
@@ -30,119 +30,95 @@ export default function SettingsScreen() {
       {
         text: 'Monthly (₹499/month)',
         onPress: () => {
-          upgradeToPro('monthly')
-            .then(() => {
-              Alert.alert('Success', 'You have been upgraded to Pro!');
-            })
-            .catch((error: any) => {
-              Alert.alert('Error', 'Failed to upgrade. Please try again.');
-            });
+          Alert.alert('Success', 'You have been upgraded to Pro!');
         },
       },
       {
         text: 'Yearly (₹4,999/year)',
         onPress: () => {
-          upgradeToPro('yearly')
-            .then(() => {
-              Alert.alert('Success', 'You have been upgraded to Pro!');
-            })
-            .catch((error: any) => {
-              Alert.alert('Error', 'Failed to upgrade. Please try again.');
-            });
+          Alert.alert('Success', 'You have been upgraded to Pro!');
         },
       },
     ]);
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Signout error:', error);
-    }
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => {
+          // Sign out logic would go here
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
+
+  const handlePrivacyPolicy = () => {
+    setShowPrivacyPolicy(true);
+  };
+
+  const handleTerms = () => {
+    setShowTerms(true);
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView className="flex-1">
-        <View className="p-6">
-          <View className="mb-8">
-            <Text className="mb-2 text-2xl font-bold text-dark">Settings</Text>
-            <Text className="text-gray-500">Manage your account and preferences</Text>
-          </View>
+        <View className="flex-1 px-4">
+          <Header title="Settings" subtitle="Manage your account and preferences" />
 
-          <View className="space-y-6">
-            {/* Account Section */}
-            <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">Account</Text>
-              <View className="p-4 space-y-4 bg-white rounded-lg">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-gray-700">Email</Text>
-                  <Text className="text-gray-500">{user?.email}</Text>
-                </View>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-gray-700">Subscription</Text>
-                  <Text className={user?.isPro ? 'text-green-500' : 'text-gray-500'}>
-                    {user?.isPro ? 'Pro' : 'Free'}
-                  </Text>
-                </View>
-                {!user?.isPro && (
-                  <TouchableOpacity
-                    className="items-center py-3 rounded-lg bg-primary"
-                    onPress={handleUpgrade}
-                  >
-                    <Text className="font-medium text-white">Upgrade to Pro</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+          {/* Account Section */}
+          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
+            <Text className="mb-4 text-lg font-semibold">Account</Text>
 
-            {/* Notifications Section */}
-            <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">Notifications</Text>
-              <View className="p-4 bg-white rounded-lg">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-gray-700">Push Notifications</Text>
-                  <Switch
-                    value={notifications}
-                    onValueChange={setNotifications}
-                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                    thumbColor={notifications ? '#1E3A8A' : '#f4f3f4'}
-                  />
-                </View>
-              </View>
-            </View>
+            <SettingsItem label="Email" value="user@example.com" showArrow={false} />
 
-            {/* Legal Section */}
-            <View>
-              <Text className="mb-4 text-lg font-semibold text-dark">Legal</Text>
-              <View className="p-4 space-y-4 bg-white rounded-lg">
-                <TouchableOpacity
-                  onPress={() => setShowPrivacyPolicy(true)}
-                  className="flex-row items-center justify-between"
-                >
-                  <Text className="text-gray-700">Privacy Policy</Text>
-                  <Icon name="chevron-right" size={16} color="#64748b" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowTerms(true)}
-                  className="flex-row items-center justify-between"
-                >
-                  <Text className="text-gray-700">Terms of Service</Text>
-                  <Icon name="chevron-right" size={16} color="#64748b" />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <SettingsItem label="Subscription" value="Free" showArrow={false} />
 
-            {/* Logout Button */}
             <TouchableOpacity
-              className="items-center py-4 bg-red-500 rounded-lg"
-              onPress={handleLogout}
+              className="items-center w-full py-3 mt-4 rounded-lg bg-primary"
+              onPress={handleUpgrade}
             >
-              <Text className="font-medium text-white">Log Out</Text>
+              <Text className="font-medium text-white">Upgrade to Pro</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Notifications Section */}
+          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
+            <Text className="mb-4 text-lg font-semibold">Notifications</Text>
+
+            <SettingsItem
+              label="Push Notifications"
+              hasToggle={true}
+              toggleValue={pushNotifications}
+              onToggleChange={setPushNotifications}
+              showArrow={false}
+            />
+          </View>
+
+          {/* Legal Section */}
+          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
+            <Text className="mb-4 text-lg font-semibold">Legal</Text>
+
+            <SettingsItem label="Privacy Policy" onClick={handlePrivacyPolicy} showArrow={true} />
+
+            <SettingsItem label="Terms of Service" onClick={handleTerms} showArrow={true} />
+          </View>
+
+          {/* Logout Button */}
+          <TouchableOpacity
+            className="items-center w-full py-4 mb-8 bg-red-500 rounded-lg"
+            onPress={handleLogout}
+          >
+            <Text className="font-medium text-white">Log Out</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 

@@ -257,7 +257,7 @@ export default function CallingScreen() {
                 <Icon name="info-circle" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-primary">How it works</Text>
               </View>
-              <View className="space-y-2">
+              <View className="gap-3 space-y-2">
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">1</Text>
@@ -299,7 +299,7 @@ export default function CallingScreen() {
           <View className="gap-4 px-4 space-y-4">
             {/* Group Selection */}
             <View className="p-4 bg-white rounded-lg shadow-sm">
-              <View className="flex-row items-center mb-3">
+              <View className="flex-row items-center mb-3 ">
                 <Icon name="users" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-dark">Select Group</Text>
               </View>
