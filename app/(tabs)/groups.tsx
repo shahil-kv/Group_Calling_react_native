@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useContactStore } from '../../stores/contactStore';
 import { useGroupStore } from '../../stores/groupStore';
+import CreateGroupModal from '../components/CreateGroupModal';
 
 export default function GroupsScreen() {
   const { groups, addGroup, updateGroup, deleteGroup } = useGroupStore();
@@ -22,42 +12,17 @@ export default function GroupsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
-  const [groupName, setGroupName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
-  const [showContactSelector, setShowContactSelector] = useState(false);
-  const [contactSearchQuery, setContactSearchQuery] = useState('');
 
   const filteredGroups = groups.filter((group: any) =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredContacts = contacts.filter(
-    (contact: any) =>
-      contact.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
-      contact.phoneNumber.includes(contactSearchQuery)
-  );
-
-  const handleAddGroup = () => {
-    if (!groupName.trim()) {
-      Alert.alert('Error', 'Group name is required');
-      return;
-    }
-
-    const selectedContacts = contacts.filter((contact: any) =>
-      selectedContactIds.includes(contact.id)
-    );
-
+  const handleAddGroup = (groupData: { name: string; description: string; contacts: any[] }) => {
     if (isEditing && currentGroupId) {
-      updateGroup(currentGroupId, {
-        name: groupName,
-        description,
-        contacts: selectedContacts,
-      });
+      updateGroup(currentGroupId, groupData);
     } else {
-      addGroup(groupName, description, selectedContacts);
+      addGroup(groupData.name, groupData.description, groupData.contacts);
     }
-
     setModalVisible(false);
     clearForm();
   };
@@ -67,9 +32,6 @@ export default function GroupsScreen() {
     if (!group) return;
 
     setCurrentGroupId(groupId);
-    setGroupName(group.name);
-    setDescription(group.description || '');
-    setSelectedContactIds(group.contacts.map((c: any) => c.id));
     setIsEditing(true);
     setModalVisible(true);
   };
@@ -82,19 +44,8 @@ export default function GroupsScreen() {
   };
 
   const clearForm = () => {
-    setGroupName('');
-    setDescription('');
-    setSelectedContactIds([]);
     setCurrentGroupId(null);
     setIsEditing(false);
-    setShowContactSelector(false);
-    setContactSearchQuery('');
-  };
-
-  const toggleContactSelection = (contactId: string) => {
-    setSelectedContactIds(prev =>
-      prev.includes(contactId) ? prev.filter(id => id !== contactId) : [...prev, contactId]
-    );
   };
 
   return (
@@ -140,10 +91,7 @@ export default function GroupsScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              className="p-4 mb-3 bg-white rounded-lg shadow-sm"
-              // onPress={() => router.push(`/groups/${item.id}`)}
-            >
+            <TouchableOpacity className="p-4 mb-3 bg-white rounded-lg shadow-sm">
               <View className="flex-row justify-between">
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-10 h-10 rounded-full bg-primary/10">
@@ -203,155 +151,24 @@ export default function GroupsScreen() {
         </View>
       )}
 
-      {/* Add/Edit Group Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <CreateGroupModal
         visible={modalVisible}
-        onRequestClose={() => {
+        onClose={() => {
           setModalVisible(false);
           clearForm();
         }}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="justify-end flex-1"
-        >
-          <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
-            {showContactSelector ? (
-              <View className="flex-1">
-                <View className="flex-row items-center justify-between mb-4">
-                  <Text className="text-xl font-bold">Select Contacts</Text>
-                  <TouchableOpacity onPress={() => setShowContactSelector(false)}>
-                    <Icon name="close" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                </View>
-
-                <View className="flex-row items-center mb-4">
-                  <View className="flex-row items-center flex-1 px-3 bg-white border border-gray-200 rounded-lg">
-                    <Icon name="search" size={18} color="#64748b" />
-                    <TextInput
-                      className="flex-1 px-2 py-2"
-                      placeholder="Search contacts..."
-                      value={contactSearchQuery}
-                      onChangeText={setContactSearchQuery}
-                    />
-                    {contactSearchQuery ? (
-                      <TouchableOpacity onPress={() => setContactSearchQuery('')}>
-                        <Icon name="close" size={18} color="#64748b" />
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                </View>
-
-                <Text className="mb-2 text-gray-500">
-                  {selectedContactIds.length} contacts selected
-                </Text>
-
-                <ScrollView style={{ maxHeight: 400 }}>
-                  {filteredContacts.length > 0 ? (
-                    filteredContacts.map((contact: any) => (
-                      <TouchableOpacity
-                        key={contact.id}
-                        className={`border-b border-gray-100 py-3 px-2 flex-row items-center justify-between ${
-                          selectedContactIds.includes(contact.id) ? 'bg-primary/5' : ''
-                        }`}
-                        onPress={() => toggleContactSelection(contact.id)}
-                      >
-                        <View>
-                          <Text className="font-medium">{contact.name}</Text>
-                          <Text className="text-sm text-gray-500">{contact.phoneNumber}</Text>
-                        </View>
-                        {selectedContactIds.includes(contact.id) && (
-                          <View className="items-center justify-center w-6 h-6 rounded-full bg-primary">
-                            <Icon name="check" size={16} color="#FFFFFF" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))
-                  ) : (
-                    <Text className="py-4 text-center text-gray-500">No contacts found</Text>
-                  )}
-                </ScrollView>
-
-                <TouchableOpacity
-                  className="items-center py-3 mt-4 rounded-lg bg-primary"
-                  onPress={() => setShowContactSelector(false)}
-                >
-                  <Text className="font-bold text-white">Done</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-xl font-bold">
-                    {isEditing ? 'Edit Group' : 'Create New Group'}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible(false);
-                      clearForm();
-                    }}
-                  >
-                    <Icon name="close" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                </View>
-
-                <View className="mb-6 space-y-4">
-                  <View>
-                    <Text className="mb-1 font-medium text-gray-700">Group Name</Text>
-                    <TextInput
-                      className="px-4 py-3 bg-white border border-gray-300 rounded-lg"
-                      placeholder="Enter group name"
-                      value={groupName}
-                      onChangeText={setGroupName}
-                    />
-                  </View>
-
-                  <View>
-                    <Text className="mb-1 font-medium text-gray-700">Description (Optional)</Text>
-                    <TextInput
-                      className="px-4 py-3 bg-white border border-gray-300 rounded-lg"
-                      placeholder="Enter description"
-                      value={description}
-                      onChangeText={setDescription}
-                      multiline
-                      numberOfLines={3}
-                      style={{ height: 80, textAlignVertical: 'top' }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text className="mb-1 font-medium text-gray-700">Add Contacts</Text>
-                    <TouchableOpacity
-                      className="flex-row items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg"
-                      onPress={() => setShowContactSelector(true)}
-                    >
-                      <Text
-                        className={selectedContactIds.length > 0 ? 'text-dark' : 'text-gray-400'}
-                      >
-                        {selectedContactIds.length > 0
-                          ? `${selectedContactIds.length} contacts selected`
-                          : 'Select contacts'}
-                      </Text>
-                      <Icon name="plus" size={18} color="#64748b" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  className="items-center py-4 rounded-lg bg-primary"
-                  onPress={handleAddGroup}
-                >
-                  <Text className="text-lg font-bold text-white">
-                    {isEditing ? 'Update Group' : 'Create Group'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        onSave={handleAddGroup}
+        isEditing={isEditing}
+        initialData={
+          isEditing && currentGroupId
+            ? {
+                name: groups.find(g => g.id === currentGroupId)?.name || '',
+                description: groups.find(g => g.id === currentGroupId)?.description || '',
+                contacts: groups.find(g => g.id === currentGroupId)?.contacts || [],
+              }
+            : undefined
+        }
+      />
     </View>
   );
 }
