@@ -4,6 +4,7 @@ import { CustomAxiosRequestConfig } from '../types/api.types';
 import { ApiResponse } from '../types/auth.types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+console.log('Current BASE_URL:', BASE_URL);
 
 export const api = axios.create({
     baseURL: BASE_URL,
@@ -16,7 +17,7 @@ export const api = axios.create({
 api.interceptors.request.use(
     async (config) => {
         const token = await AsyncStorage.getItem('access_token');
-        console.log('Request interceptor', token);
+        console.log(BASE_URL);
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -38,16 +39,13 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                console.log('Refreshing token From Response Interceptor');
                 const refreshToken = await AsyncStorage.getItem('refresh_token');
                 const response = await api.post<ApiResponse<{ tokens: { accessToken: string; refreshToken: string } }>>('/user/refresh-token', {
                     refreshToken,
                 });
-
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
                 await AsyncStorage.setItem('access_token', accessToken);
                 await AsyncStorage.setItem('refresh_token', newRefreshToken);
-
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return api(originalRequest);
             } catch (refreshError) {
@@ -55,7 +53,6 @@ api.interceptors.response.use(
                 return Promise.reject(refreshError);
             }
         }
-
         return Promise.reject(error);
     }
 ); 

@@ -108,13 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // First check if we have stored tokens
       const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
-      console.log(
-        'Checking auth state, refresh token:',
-        storedRefreshToken ? 'exists' : 'not found'
-      );
-
       if (!storedRefreshToken) {
-        console.log('No refresh token, clearing user and redirecting to login');
         setUser(null);
         setTokens(null);
         // Force navigation to login regardless of current route
@@ -123,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        console.log('Attempting to refresh token');
         const response = await refreshToken({
           refreshToken: storedRefreshToken,
         });
