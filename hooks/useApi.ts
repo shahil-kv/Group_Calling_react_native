@@ -7,17 +7,10 @@
 import { ApiErrorResponse, MutationConfig } from '@/types/api.types';
 import { handleApiError } from '@/utils/error-handler';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { useLoader } from '../contexts/LoaderContext';
+import { api } from '../utils/api';
 import { useToast } from './useToast';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
-const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
 const formatErrorMessage = (error: unknown): string => {
     try {
         if (error instanceof Error) {

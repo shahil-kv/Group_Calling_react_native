@@ -16,6 +16,8 @@ export const api = axios.create({
 api.interceptors.request.use(
     async (config) => {
         const token = await AsyncStorage.getItem('access_token');
+        console.log('Request interceptor', token);
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -36,6 +38,7 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
+                console.log('Refreshing token From Response Interceptor');
                 const refreshToken = await AsyncStorage.getItem('refresh_token');
                 const response = await api.post<ApiResponse<{ tokens: { accessToken: string; refreshToken: string } }>>('/user/refresh-token', {
                     refreshToken,
