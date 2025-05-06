@@ -3,7 +3,7 @@ import axios from 'axios';
 import { CustomAxiosRequestConfig } from '../types/api.types';
 import { ApiResponse } from '../types/auth.types';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 console.log('Current BASE_URL:', BASE_URL);
 
 export const api = axios.create({
