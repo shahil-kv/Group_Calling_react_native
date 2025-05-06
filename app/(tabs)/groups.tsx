@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { Alert, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import CreateGroupModal from '../../components/CreateGroupModal';
-import { useContactStore } from '../../stores/contactStore';
 import { useGroupStore } from '../../stores/groupStore';
 
 export default function GroupsScreen() {
   const { groups, addGroup, updateGroup, deleteGroup } = useGroupStore();
-  const { contacts } = useContactStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +44,7 @@ export default function GroupsScreen() {
   const clearForm = () => {
     setCurrentGroupId(null);
     setIsEditing(false);
+    setModalVisible(false);
   };
 
   return (
@@ -77,7 +76,7 @@ export default function GroupsScreen() {
           className="flex-row items-center justify-center py-3 rounded-lg bg-primary"
           onPress={() => {
             clearForm();
-            setModalVisible(true);
+            setTimeout(() => setModalVisible(true), 0);
           }}
         >
           <Icon name="user" size={18} color="#FFFFFF" />

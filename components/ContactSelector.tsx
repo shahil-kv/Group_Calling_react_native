@@ -145,6 +145,12 @@ export default function ContactSelector({
               <Text className="text-sm font-medium text-gray-600">Clear all</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            onPress={() => setSelectedContacts(deviceContacts)}
+            className="px-3 py-1 bg-gray-100 rounded-full"
+          >
+            <Text className="text-sm font-medium text-gray-600">Select all</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
