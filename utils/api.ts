@@ -3,7 +3,8 @@ import axios from 'axios';
 import { CustomAxiosRequestConfig } from '../types/api.types';
 import { ApiResponse } from '../types/auth.types';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || '192.168.10.95:8080/api/v1';
+// Use environment variable or fallback to your actual backend server
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.10.95:8080/api/v1';
 
 console.log('Current BASE_URL:', BASE_URL);
 
@@ -12,20 +13,28 @@ export const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 10000, // 10 second timeout
 });
 
 // Add request interceptor to add auth token
 api.interceptors.request.use(
     async (config) => {
-        const token = await AsyncStorage.getItem('access_token');
-        console.log(BASE_URL);
+        try {
+            const token = await AsyncStorage.getItem('access_token');
+            console.log('Making request to:', BASE_URL + config.url);
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        } catch (error) {
+            console.error('Error accessing AsyncStorage:', error);
+            // Continue with the request even if AsyncStorage fails
+            return config;
         }
-        return config;
     },
     (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
     }
 );
@@ -41,16 +50,32 @@ api.interceptors.response.use(
 
             try {
                 const refreshToken = await AsyncStorage.getItem('refresh_token');
+                if (!refreshToken) {
+                    throw new Error('No refresh token available');
+                }
+
                 const response = await api.post<ApiResponse<{ tokens: { accessToken: string; refreshToken: string } }>>('/user/refresh-token', {
                     refreshToken,
                 });
+
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
-                await AsyncStorage.setItem('access_token', accessToken);
-                await AsyncStorage.setItem('refresh_token', newRefreshToken);
+                
+                try {
+                    await AsyncStorage.setItem('access_token', accessToken);
+                    await AsyncStorage.setItem('refresh_token', newRefreshToken);
+                } catch (storageError) {
+                    console.error('Error storing tokens:', storageError);
+                }
+
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return api(originalRequest);
             } catch (refreshError) {
-                await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+                console.error('Token refresh error:', refreshError);
+                try {
+                    await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+                } catch (storageError) {
+                    console.error('Error removing tokens:', storageError);
+                }
                 return Promise.reject(refreshError);
             }
         }
