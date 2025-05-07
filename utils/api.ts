@@ -3,7 +3,8 @@ import axios from 'axios';
 import { CustomAxiosRequestConfig } from '../types/api.types';
 import { ApiResponse } from '../types/auth.types';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || '192.168.10.95:8080/api/v1';
+
 console.log('Current BASE_URL:', BASE_URL);
 
 export const api = axios.create({
