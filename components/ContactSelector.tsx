@@ -326,17 +326,22 @@ export default function ContactSelector({
         ) : filteredContacts.length > 0 ? (
           <>
             {filteredContacts.map((contact, index) => renderContactItem(contact, index))}
-            {!searchQuery && isLoadingMore && (
+            {!searchQuery && (
               <View className="items-center py-3">
-                <ActivityIndicator size="small" color="#1E3A8A" />
-                <Text className="mt-1.5 text-xs text-gray-500">Loading more contacts...</Text>
-              </View>
-            )}
-            {!searchQuery && !hasMore && deviceContacts.length > 0 && (
-              <View className="items-center py-3">
-                <Text className="text-xs text-gray-500">
-                  {totalContacts} contacts
-                </Text>
+                {isLoadingMore ? (
+                  <>
+                    <ActivityIndicator size="small" color="#1E3A8A" />
+                    <Text className="mt-1.5 text-xs text-gray-500">Loading more contacts...</Text>
+                  </>
+                ) : (
+                  <Text className="text-xs text-gray-500">
+                    {hasMore ? (
+                      `Loaded ${deviceContacts.length} of ${totalContacts} contacts`
+                    ) : (
+                      `All ${totalContacts} contacts loaded`
+                    )}
+                  </Text>
+                )}
               </View>
             )}
           </>
