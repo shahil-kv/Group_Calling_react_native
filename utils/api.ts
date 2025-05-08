@@ -4,7 +4,7 @@ import { CustomAxiosRequestConfig } from '../types/api.types';
 import { ApiResponse } from '../types/auth.types';
 
 // Use environment variable or fallback to your actual backend server
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.10.95:8080/api/v1';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL as string
 
 console.log('Current BASE_URL:', BASE_URL);
 

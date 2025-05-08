@@ -110,7 +110,7 @@ export default function SignupScreen() {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
-    showLoader: false,
+    showLoader: true,
   });
 
   const { mutateAsync: verifyOTP } = usePost('/user/verify-phone', {
@@ -135,7 +135,8 @@ export default function SignupScreen() {
         opsMode: 'INSERT',
         role: 'USER',
       };
-      await signup(payload);
+   const result=   await signup(payload);
+   
       setPhoneNumber(data.phoneNumber);
       setShowOTP(true);
     } catch (error) {
