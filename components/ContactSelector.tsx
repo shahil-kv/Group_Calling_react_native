@@ -150,9 +150,13 @@ export default function ContactSelector({
       const nextContacts = allContacts.slice(startIndex, endIndex);
 
       if (isMounted.current && nextContacts.length > 0) {
-        setDeviceContacts(prev => [...prev, ...nextContacts]);
+        setDeviceContacts(prev => {
+          const newContacts = [...prev, ...nextContacts];
+          // Ensure we don't exceed the total number of contacts
+          return newContacts.slice(0, totalContacts);
+        });
         setPage(nextPage);
-        setHasMore(endIndex < allContacts.length);
+        setHasMore(endIndex < totalContacts);
       } else {
         setHasMore(false);
       }
@@ -166,7 +170,7 @@ export default function ContactSelector({
         isLoadingRef.current = false;
       }
     }
-  }, [hasMore, page, allContacts, searchQuery]);
+  }, [hasMore, page, allContacts, searchQuery, totalContacts]);
 
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (searchQuery || !hasMore || isLoadingRef.current) return;    
@@ -175,10 +179,10 @@ export default function ContactSelector({
     const paddingToBottom = 50;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
     
-    if (isCloseToBottom) {
+    if (isCloseToBottom && deviceContacts.length < totalContacts) {
       loadMoreContacts();
     }
-  }, [hasMore, searchQuery, loadMoreContacts]);
+  }, [hasMore, searchQuery, loadMoreContacts, deviceContacts.length, totalContacts]);
 
   const filteredContacts = searchQuery
     ? allContacts.filter(contact => {
@@ -285,22 +289,22 @@ export default function ContactSelector({
           </View>
         </View>
 
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center justify-between py-3sss">
           <Text className="text-xs font-medium text-gray-500">
             {selectedContacts.length} contacts selected
           </Text>
-          <View className="flex-row space-x-2">
+          <View className="flex-row gap-2 space-x-2">
             {selectedContacts.length > 0 && (
               <TouchableOpacity
                 onPress={() => setSelectedContacts([])}
-                className="px-2.5 py-0.5 bg-gray-100 rounded-full"
+                className="px-3.5 py-2 bg-gray-100 rounded-full"
               >
                 <Text className="text-xs font-medium text-gray-600">Clear all</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               onPress={() => setSelectedContacts(allContacts)}
-              className="px-2.5 py-0.5 bg-gray-100 rounded-full"
+              className="px-3.5 py-2 bg-gray-100 rounded-full"
             >
               <Text className="text-xs font-medium text-gray-600">Select all</Text>
             </TouchableOpacity>
@@ -316,7 +320,7 @@ export default function ContactSelector({
         onMomentumScrollEnd={handleScroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 5 }}
       >
         {isLoading ? (
           <View className="items-center justify-center py-8">
@@ -335,7 +339,7 @@ export default function ContactSelector({
                   </>
                 ) : (
                   <Text className="text-xs text-gray-500">
-                    {hasMore ? (
+                    {deviceContacts.length < totalContacts ? (
                       `Loaded ${deviceContacts.length} of ${totalContacts} contacts`
                     ) : (
                       `All ${totalContacts} contacts loaded`

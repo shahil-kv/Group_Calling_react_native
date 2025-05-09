@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSContactsUsageDescription": "This app needs access to contacts to select people to call.",
+        "NSMicrophoneUsageDescription": "This app needs access to the microphone to record voice messages.",
+        "NSCameraUsageDescription": "This app needs access to the camera to take profile pictures."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +22,15 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.adhilansari.testing_shahil"
+      "package": "com.adhilansari.testing_shahil",
+      "permissions": [
+        "android.permission.CALL_PHONE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS",
+        "CAMERA", "RECORD_AUDIO",
+        "android.permission.CAMERA"      
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +46,18 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
       ]
     ],

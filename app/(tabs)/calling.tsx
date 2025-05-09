@@ -4,22 +4,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CallStatus, useCallStore } from '@/stores/callStore';
 import { Contact, useContactStore } from '@/stores/contactStore';
 import { useGroupStore } from '@/stores/groupStore';
+import * as Contacts from 'expo-contacts';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Animated,
   Modal,
-  PermissionsAndroid,
   Platform,
   ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
+
+type ExpoContact = Contacts.Contact;
 
 interface Group {
   id: string;
@@ -43,7 +45,7 @@ export default function CallingScreen() {
   const { contacts } = useContactStore();
   const { currentCall, startCall, endCall, moveToNextContact, updateStatus } = useCallStore();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<ExpoContact[]>([]);
   const [isSelectingContacts, setIsSelectingContacts] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedMessage, setRecordedMessage] = useState('');
@@ -62,23 +64,183 @@ export default function CallingScreen() {
     }).start();
   }, []);
 
-  const requestCallPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.CALL_PHONE,
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        ]);
-        return Object.values(granted).every(
-          permission => permission === PermissionsAndroid.RESULTS.GRANTED
-        );
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true;
+  const requestCallPermissions = async (): Promise<boolean> => {
+    return true; // For non-Android platforms
   };
+
+  // const requestCallPermissions = async () => {
+  //   if (Platform.OS === 'android') {
+  //     try {
+  //       console.log('Starting permission request process...');
+
+
+  //       // First check if we already have the permissions
+  //       const hasCallPermission = await PermissionsAndroid.check(
+  //         PermissionsAndroid.PERMISSIONS.CALL_PHONE
+  //       );
+  //       const hasRecordPermission = await PermissionsAndroid.check(
+  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+  //       );
+
+  //       console.log('Initial permission check:', {
+  //         hasCallPermission,
+  //         hasRecordPermission
+  //       });
+
+  //       // If we already have both permissions, return true
+  //       if (hasCallPermission && hasRecordPermission) {
+  //         console.log('All permissions already granted');
+  //         return true;
+  //       }
+
+  //       // Show specific alert based on which permissions are missing
+  //       if (!hasCallPermission || !hasRecordPermission) {
+  //         const missingPermissions: string[] = [];
+  //         if (!hasCallPermission) missingPermissions.push('Call');
+  //         if (!hasRecordPermission) missingPermissions.push('Recording');
+
+  //         const showPartialPermissionAlert = () => {
+  //           return new Promise<boolean>((resolve) => {
+  //             console.log(missingPermissions);
+
+  //             Alert.alert(
+  //               'Additional Permissions Required',
+  //               `This app needs ${missingPermissions.join(' and ')} permission${missingPermissions.length > 1 ? 's' : ''} to work properly. Would you like to grant ${missingPermissions.length > 1 ? 'them' : 'it'} now?`,
+  //               [
+  //                 {
+  //                   text: 'Not Now',
+  //                   style: 'cancel',
+  //                   onPress: () => {
+  //                     console.log('User declined to grant permissions');
+  //                     resolve(false);
+  //                   }
+  //                 },
+  //                 {
+  //                   text: 'Grant Permission' + (missingPermissions.length > 1 ? 's' : ''),
+  //                   onPress: async () => {
+  //                     try {
+  //                       // Request only the missing permissions
+  //                       const permissionsToRequest: (typeof PermissionsAndroid.PERMISSIONS.CALL_PHONE)[] = [];
+  //                       if (!hasCallPermission) {
+  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
+  //                       }
+  //                       if (!hasRecordPermission) {
+  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+  //                       }
+
+  //                       console.log('Requesting permissions:', permissionsToRequest);
+
+  //                       // Request permissions one by one to ensure proper handling
+  //                       for (const permission of permissionsToRequest) {
+  //                         console.log(`Requesting permission: ${permission}`);
+  //                         const result = await PermissionsAndroid.request(permission);
+  //                         console.log('result', result);
+
+  //                         console.log(`Permission result for ${permission}:`, result);
+
+
+  //                         if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+  //                           console.log(`Permission denied for ${permission}`);
+  //                           Alert.alert(
+  //                             'Permission Required',
+  //                             `Please grant ${permission === PermissionsAndroid.PERMISSIONS.CALL_PHONE ? 'Call' : 'Recording'} permission to continue.`,
+  //                             [
+  //                               {
+  //                                 text: 'Open Settings',
+  //                                 onPress: () => {
+  //                                   if (Platform.OS === 'android') {
+  //                                     Linking.openSettings();
+  //                                   }
+  //                                   resolve(false);
+  //                                 }
+  //                               },
+  //                               {
+  //                                 text: 'Cancel',
+  //                                 style: 'cancel',
+  //                                 onPress: () => resolve(false)
+  //                               }
+  //                             ]
+  //                           );
+  //                           return;
+  //                         }
+  //                       }
+
+  //                       // Verify all permissions were granted
+  //                       const verifyCallPermission = await PermissionsAndroid.check(
+  //                         PermissionsAndroid.PERMISSIONS.CALL_PHONE
+  //                       );
+  //                       const verifyRecordPermission = await PermissionsAndroid.check(
+  //                         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+  //                       );
+
+  //                       console.log('Final permission verification:', {
+  //                         verifyCallPermission,
+  //                         verifyRecordPermission
+  //                       });
+
+  //                       if (verifyCallPermission && verifyRecordPermission) {
+  //                         console.log('All permissions successfully granted');
+  //                         resolve(true);
+  //                       } else {
+  //                         console.log('Permission verification failed');
+  //                         Alert.alert(
+  //                           'Permission Error',
+  //                           'Failed to verify permissions. Please try again or check your device settings.',
+  //                           [
+  //                             {
+  //                               text: 'Try Again',
+  //                               onPress: () => resolve(false)
+  //                             },
+  //                             {
+  //                               text: 'Cancel',
+  //                               style: 'cancel',
+  //                               onPress: () => resolve(false)
+  //                             }
+  //                           ]
+  //                         );
+  //                       }
+  //                     } catch (error) {
+  //                       console.error('Error in permission request:', error);
+  //                       Alert.alert(
+  //                         'Permission Error',
+  //                         'There was an error requesting permissions. Please try again.',
+  //                         [
+  //                           {
+  //                             text: 'Try Again',
+  //                             onPress: () => resolve(false)
+  //                           },
+  //                           {
+  //                             text: 'Cancel',
+  //                             style: 'cancel',
+  //                             onPress: () => resolve(false)
+  //                           }
+  //                         ]
+  //                       );
+  //                     }
+  //                   }
+  //                 }
+  //               ]
+  //             );
+  //           });
+  //         };
+
+  //         const permissionGranted = await showPartialPermissionAlert();
+  //         console.log('Permission request final result:', permissionGranted);
+  //         return permissionGranted;
+  //       }
+
+  //       return false;
+  //     } catch (err) {
+  //       console.error('Error in permission handling:', err);
+  //       Alert.alert(
+  //         'Permission Error',
+  //         'There was an error handling permissions. Please try again or check your device settings.'
+  //       );
+  //       return false;
+  //     }
+  //   }
+  //   return true; // For non-Android platforms
+  // };
 
   const confirmSequentialCalls = () => {
     return new Promise(resolve => {
@@ -102,46 +264,130 @@ export default function CallingScreen() {
   };
 
   const handleStartCall = async () => {
-    if (selectedContacts.length === 0) {
-      Alert.alert('No Contacts Selected', 'Please select at least one contact to call.');
-      return;
-    }
+    try {
+      // 1. Validate contact selection
+      if (selectedContacts.length === 0) {
+        Alert.alert('No Contacts Selected', 'Please select at least one contact to call.');
+        return;
+      }
 
-    const contactLimit = user?.is_premium ? 500 : 50;
-    if (selectedContacts.length > contactLimit) {
+      // 2. Check premium limits
+      const contactLimit = user?.is_premium ? 500 : 50;
+      if (selectedContacts.length > contactLimit) {
+        Alert.alert(
+          'Contact Limit Exceeded',
+          `Free users can call up to 50 contacts. Upgrade to Pro to call up to 500 contacts.`
+        );
+        return;
+      }
+
+      // 3. Request and validate permissions
+      console.log('Requesting permissions before starting call...');
+      const hasPermission = await requestCallPermissions();
+      console.log('Permission result:', hasPermission);
+
+      if (!hasPermission) {
+        Alert.alert(
+          'Permission Required',
+          'Please grant call and recording permissions to use this feature.'
+        );
+        return;
+      }
+
+      // 4. Get user confirmation
+      const confirmed = await confirmSequentialCalls();
+      if (!confirmed) {
+        return;
+      }
+
+      // 5. Validate and convert contacts
+      console.log('Converting contacts...');
+      const validContacts: Contact[] = selectedContacts
+        .filter(contact => {
+          const phoneNumber = contact.phoneNumbers?.[0]?.number;
+          const isValid = phoneNumber && phoneNumber.trim().length > 0;
+          if (!isValid) {
+            console.warn(`Skipping contact ${contact.name}: Invalid phone number`);
+          }
+          return isValid;
+        })
+        .map(contact => ({
+          id: contact.id || `contact-${Date.now()}-${Math.random()}`,
+          name: contact.name || 'Unknown Contact',
+          phoneNumber: contact.phoneNumbers?.[0]?.number?.trim() || '',
+          email: contact.emails?.[0]?.email,
+          photo: contact.imageAvailable && contact.image ? contact.image.uri : undefined,
+        }));
+
+      if (validContacts.length === 0) {
+        Alert.alert(
+          'Invalid Contacts',
+          'None of the selected contacts have valid phone numbers.'
+        );
+        return;
+      }
+
+      if (validContacts.length < selectedContacts.length) {
+        Alert.alert(
+          'Some Contacts Skipped',
+          `${selectedContacts.length - validContacts.length} contacts were skipped because they don't have valid phone numbers.`
+        );
+      }
+
+      // 6. Start the call
+      console.log('Starting call process...');
+      const groupName = getGroupName();
+      const useRecordedMessage = Boolean(user?.is_premium && recordedMessage);
+
+      console.log('Call parameters:', {
+        contactCount: validContacts.length,
+        useRecordedMessage,
+        groupName,
+        isPremium: user?.is_premium
+      });
+
+      try {
+        // Start the call with valid contacts
+        startCall(validContacts, recordedMessage, useRecordedMessage, groupName);
+
+        // Provide haptic feedback
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+
+        // Log success
+        console.log('Call started successfully');
+      } catch (error) {
+        console.error('Error starting call:', error);
+        Alert.alert(
+          'Error Starting Call',
+          'There was a problem starting the call. Please try again.'
+        );
+      }
+    } catch (error) {
+      console.error('Error in handleStartCall:', error);
       Alert.alert(
-        'Contact Limit Exceeded',
-        `Free users can call up to 50 contacts. Upgrade to Pro to call up to 500 contacts.`
+        'Error',
+        'There was a problem starting the call. Please try again.'
       );
-      return;
-    }
-
-    const hasPermission = await requestCallPermissions();
-    if (!hasPermission) {
-      Alert.alert(
-        'Permission Required',
-        'Please grant call and recording permissions to use this feature.'
-      );
-      return;
-    }
-
-    const confirmed = await confirmSequentialCalls();
-    if (!confirmed) {
-      return;
-    }
-
-    if (user?.is_premium && recordedMessage) {
-      startCall(selectedContacts, recordedMessage, true, getGroupName());
-    } else {
-      startCall(selectedContacts, '', false, getGroupName());
     }
   };
 
-  const handleEndCall = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  const handleEndCall = async () => {
+    try {
+      console.log('Ending call...');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+      endCall();
+      console.log('Call ended successfully');
+    } catch (error) {
+      console.error('Error ending call:', error);
+      Alert.alert(
+        'Error',
+        'There was a problem ending the call. Please try again.'
+      );
     }
-    endCall();
   };
 
   const getCallStatusColor = (status: CallStatus) => {
@@ -176,20 +422,29 @@ export default function CallingScreen() {
 
   const handleGroupSelect = (groupId: string | null) => {
     setSelectedGroup(groupId);
-
     if (groupId) {
       const group = groups.find((g: Group) => g.id === groupId);
       if (group) {
-        setSelectedContacts(group.contacts);
+        // Convert our Contact type to ExpoContact type
+        const expoContacts: ExpoContact[] = group.contacts.map(contact => ({
+          id: contact.id,
+          name: contact.name,
+          phoneNumbers: [{ number: contact.phoneNumber, type: 'mobile', label: 'mobile' }],
+          emails: contact.email ? [{ email: contact.email, type: 'work', label: 'work' }] : [],
+          imageAvailable: !!contact.photo,
+          image: contact.photo ? { uri: contact.photo } : undefined,
+          contactType: 'person',
+        }));
+        setSelectedContacts(expoContacts);
       }
     } else {
       setSelectedContacts([]);
     }
   };
 
-  const toggleContactSelection = (contact: Contact) => {
-    if (selectedContacts.some((c: Contact) => c.id === contact.id)) {
-      setSelectedContacts(selectedContacts.filter((c: Contact) => c.id !== contact.id));
+  const toggleContactSelection = (contact: ExpoContact) => {
+    if (selectedContacts.some((c: ExpoContact) => c.id === contact.id)) {
+      setSelectedContacts(selectedContacts.filter((c: ExpoContact) => c.id !== contact.id));
     } else {
       setSelectedContacts([...selectedContacts, contact]);
     }
@@ -306,9 +561,8 @@ export default function CallingScreen() {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${
-                    selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
-                  }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
+                    }`}
                   onPress={() => handleGroupSelect(null)}
                 >
                   <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
@@ -319,9 +573,8 @@ export default function CallingScreen() {
                 {groups.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${
-                      selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
-                    }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
+                      }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
                     <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
@@ -352,7 +605,7 @@ export default function CallingScreen() {
                     {selectedContacts.length} contacts selected
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {selectedContacts.slice(0, 5).map((contact: Contact) => (
+                    {selectedContacts.slice(0, 5).map((contact: ExpoContact) => (
                       <View key={contact.id} className="items-center mr-4">
                         <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-primary/10">
                           <Icon name="user" size={24} color="#1E3A8A" />
@@ -401,9 +654,8 @@ export default function CallingScreen() {
               </View>
 
               <TouchableOpacity
-                className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
-                  isRecording ? 'bg-error/10' : ''
-                } ${!user?.is_premium ? 'opacity-50' : ''}`}
+                className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
+                  } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
               >
@@ -412,8 +664,8 @@ export default function CallingScreen() {
                     {isRecording
                       ? 'Recording...'
                       : recordedMessage
-                      ? 'Re-record Message'
-                      : 'Record Voice Message'}
+                        ? 'Re-record Message'
+                        : 'Record Voice Message'}
                   </Text>
                   {!user?.is_premium && (
                     <Text className="mt-1 text-sm text-gray-500">
@@ -433,9 +685,8 @@ export default function CallingScreen() {
 
             {/* Start Calling Button */}
             <TouchableOpacity
-              className={`bg-primary rounded-lg py-4 items-center mt-2 ${
-                selectedContacts.length === 0 ? 'opacity-50' : ''
-              }`}
+              className={`bg-primary rounded-lg py-2 items-center my-2 ${selectedContacts.length === 0 ? 'opacity-50' : ''
+                }`}
               onPress={handleStartCall}
               disabled={selectedContacts.length === 0}
             >
@@ -464,7 +715,7 @@ export default function CallingScreen() {
                 visible={isSelectingContacts}
                 onClose={() => setIsSelectingContacts(false)}
                 onDone={(contacts: any) => {
-                  setSelectedContacts(contacts);
+                  setSelectedContacts(contacts as ExpoContact[]);
                   setIsSelectingContacts(false);
                 }}
                 initialSelectedContacts={selectedContacts as any}
