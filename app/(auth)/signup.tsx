@@ -1,7 +1,7 @@
 // SignupScreen.tsx
-import OTPInputView from '@twotalltotems/react-native-otp-input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,10 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import * as yup from 'yup';
 import Button from '../../components/Button';
 import { DynamicForm } from '../../components/DynamicForm';
+import CustomOTPInput from '../../components/OTPInput';
 import { usePost } from '../../hooks/useApi';
 
 // Validation Schema
@@ -80,35 +82,84 @@ export default function SignupScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [isStorageReady, setIsStorageReady] = useState(false);
+
+  // Check AsyncStorage readiness
+  useEffect(() => {
+    const checkStorage = async () => {
+      try {
+        await AsyncStorage.setItem('test', 'test');
+        const value = await AsyncStorage.getItem('test');
+        await AsyncStorage.removeItem('test');
+        if (value === 'test') {
+          setIsStorageReady(true);
+        }
+      } catch (error) {
+        console.error('Storage check failed:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Storage Error',
+          text2: 'Please restart the app',
+        });
+      }
+    };
+    checkStorage();
+  }, []);
+
   const { mutateAsync: signup } = usePost('/user/register', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
-    showLoader: false,
+    showLoader: true,
   });
+
   const { mutateAsync: verifyOTP } = usePost('/user/verify-phone', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
   });
+
   const onSubmit = async (data: FormData) => {
+    if (!isStorageReady) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please wait while we initialize the app',
+      });
+      return;
+    }
+
     try {
       const payload = {
         ...data,
         opsMode: 'INSERT',
         role: 'USER',
       };
-      await signup(payload);
+   const result=   await signup(payload);
+   
       setPhoneNumber(data.phoneNumber);
       setShowOTP(true);
     } catch (error) {
       console.error('Signup process error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Signup Failed',
+        text2: 'Please try again',
+      });
     }
   };
 
   const handleOTPSubmit = async () => {
+    if (!isStorageReady) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please wait while we initialize the app',
+      });
+      return;
+    }
+
     try {
-      // Simulate OTP verification
       const phoneNumberCleaned = phoneNumber.replace(/\s+/g, '');
       console.log('phoneNumber', phoneNumberCleaned);
       await verifyOTP({
@@ -118,8 +169,21 @@ export default function SignupScreen() {
       router.navigate('/(auth)/login');
     } catch (error) {
       console.error('OTP verification error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Verification Failed',
+        text2: 'Please try again',
+      });
     }
   };
+
+  if (!isStorageReady) {
+    return (
+      <View className="items-center justify-center flex-1 bg-background">
+        <Text className="text-lg text-gray-600">Initializing app...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -149,40 +213,11 @@ export default function SignupScreen() {
             />
           ) : (
             <View className="space-y-4">
-              <View>
-                <Text className="mb-2 font-medium text-gray-700">Enter OTP</Text>
-                <OTPInputView
-                  style={{ width: '100%', height: 100 }}
-                  pinCount={6}
-                  code={otp}
-                  onCodeChanged={setOtp}
-                  autoFocusOnLoad={true}
-                  secureTextEntry={false}
-                  editable={true}
-                  keyboardType="number-pad"
-                  codeInputFieldStyle={{
-                    width: 40,
-                    height: 50,
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB',
-                    borderRadius: 8,
-                    backgroundColor: 'white',
-                    color: '#1F2937',
-                    fontSize: 20,
-                    fontWeight: '600',
-                  }}
-                  codeInputHighlightStyle={{
-                    borderColor: '#6366F1',
-                    borderWidth: 2,
-                  }}
-                  onCodeFilled={(code: string) => {
-                    setOtp(code);
-                  }}
-                  clearInputs={false}
-                  placeholderCharacter=""
-                  placeholderTextColor="#E5E7EB"
-                />
-              </View>
+              <CustomOTPInput
+                value={otp}
+                onChange={setOtp}
+                label="Enter OTP"
+              />
               <Button title="Verify OTP" onPress={handleOTPSubmit} fullWidth size="lg" />
             </View>
           )}
