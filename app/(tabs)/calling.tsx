@@ -2,8 +2,9 @@ import ActiveCallScreen from '@/components/ActiveCallScreen';
 import ContactSelector from '@/components/ContactSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import { CallStatus, useCallStore } from '@/stores/callStore';
-import { Contact, useContactStore } from '@/stores/contactStore';
+import { useContactStore } from '@/stores/contactStore';
 import { useGroupStore } from '@/stores/groupStore';
+import { Contact } from '@/types/contact.types';
 import * as Contacts from 'expo-contacts';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -72,7 +73,6 @@ export default function CallingScreen() {
   //   if (Platform.OS === 'android') {
   //     try {
   //       console.log('Starting permission request process...');
-
 
   //       // First check if we already have the permissions
   //       const hasCallPermission = await PermissionsAndroid.check(
@@ -137,7 +137,6 @@ export default function CallingScreen() {
   //                         console.log('result', result);
 
   //                         console.log(`Permission result for ${permission}:`, result);
-
 
   //                         if (result !== PermissionsAndroid.RESULTS.GRANTED) {
   //                           console.log(`Permission denied for ${permission}`);
@@ -302,7 +301,7 @@ export default function CallingScreen() {
 
       // 5. Validate and convert contacts
       console.log('Converting contacts...');
-      const validContacts: Contact[] = selectedContacts
+      const validContacts = selectedContacts
         .filter(contact => {
           const phoneNumber = contact.phoneNumbers?.[0]?.number;
           const isValid = phoneNumber && phoneNumber.trim().length > 0;
@@ -320,17 +319,16 @@ export default function CallingScreen() {
         }));
 
       if (validContacts.length === 0) {
-        Alert.alert(
-          'Invalid Contacts',
-          'None of the selected contacts have valid phone numbers.'
-        );
+        Alert.alert('Invalid Contacts', 'None of the selected contacts have valid phone numbers.');
         return;
       }
 
       if (validContacts.length < selectedContacts.length) {
         Alert.alert(
           'Some Contacts Skipped',
-          `${selectedContacts.length - validContacts.length} contacts were skipped because they don't have valid phone numbers.`
+          `${
+            selectedContacts.length - validContacts.length
+          } contacts were skipped because they don't have valid phone numbers.`
         );
       }
 
@@ -343,7 +341,7 @@ export default function CallingScreen() {
         contactCount: validContacts.length,
         useRecordedMessage,
         groupName,
-        isPremium: user?.is_premium
+        isPremium: user?.is_premium,
       });
 
       try {
@@ -366,10 +364,7 @@ export default function CallingScreen() {
       }
     } catch (error) {
       console.error('Error in handleStartCall:', error);
-      Alert.alert(
-        'Error',
-        'There was a problem starting the call. Please try again.'
-      );
+      Alert.alert('Error', 'There was a problem starting the call. Please try again.');
     }
   };
 
@@ -383,10 +378,7 @@ export default function CallingScreen() {
       console.log('Call ended successfully');
     } catch (error) {
       console.error('Error ending call:', error);
-      Alert.alert(
-        'Error',
-        'There was a problem ending the call. Please try again.'
-      );
+      Alert.alert('Error', 'There was a problem ending the call. Please try again.');
     }
   };
 
@@ -429,10 +421,9 @@ export default function CallingScreen() {
         const expoContacts: ExpoContact[] = group.contacts.map(contact => ({
           id: contact.id,
           name: contact.name,
-          phoneNumbers: [{ number: contact.phoneNumber, type: 'mobile', label: 'mobile' }],
-          emails: contact.email ? [{ email: contact.email, type: 'work', label: 'work' }] : [],
-          imageAvailable: !!contact.photo,
-          image: contact.photo ? { uri: contact.photo } : undefined,
+          phoneNumbers: [
+            { number: contact.phoneNumbers[0].number, type: 'mobile', label: 'mobile' },
+          ],
           contactType: 'person',
         }));
         setSelectedContacts(expoContacts);
@@ -561,8 +552,9 @@ export default function CallingScreen() {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
-                    }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${
+                    selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
+                  }`}
                   onPress={() => handleGroupSelect(null)}
                 >
                   <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
@@ -573,8 +565,9 @@ export default function CallingScreen() {
                 {groups.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
-                      }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${
+                      selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
+                    }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
                     <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
@@ -654,8 +647,9 @@ export default function CallingScreen() {
               </View>
 
               <TouchableOpacity
-                className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
-                  } ${!user?.is_premium ? 'opacity-50' : ''}`}
+                className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
+                  isRecording ? 'bg-error/10' : ''
+                } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
               >
@@ -664,8 +658,8 @@ export default function CallingScreen() {
                     {isRecording
                       ? 'Recording...'
                       : recordedMessage
-                        ? 'Re-record Message'
-                        : 'Record Voice Message'}
+                      ? 'Re-record Message'
+                      : 'Record Voice Message'}
                   </Text>
                   {!user?.is_premium && (
                     <Text className="mt-1 text-sm text-gray-500">
@@ -685,8 +679,9 @@ export default function CallingScreen() {
 
             {/* Start Calling Button */}
             <TouchableOpacity
-              className={`bg-primary rounded-lg py-2 items-center my-2 ${selectedContacts.length === 0 ? 'opacity-50' : ''
-                }`}
+              className={`bg-primary rounded-lg py-2 items-center my-2 ${
+                selectedContacts.length === 0 ? 'opacity-50' : ''
+              }`}
               onPress={handleStartCall}
               disabled={selectedContacts.length === 0}
             >

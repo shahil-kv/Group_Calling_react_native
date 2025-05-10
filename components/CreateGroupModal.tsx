@@ -1,3 +1,4 @@
+import { Contact } from '@/types/contact.types';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -21,7 +22,7 @@ interface CreateGroupModalProps {
   initialData?: {
     name: string;
     description: string;
-    contacts: any[];
+    contacts: Contact[];
   };
 }
 
@@ -46,6 +47,15 @@ export default function CreateGroupModal({
       setSelectedContacts(initialData.contacts || []);
     }
   }, [isEditing, initialData]);
+
+  // Reset form when modal becomes visible and not in editing mode
+  useEffect(() => {
+    if (visible && !isEditing) {
+      setGroupName('');
+      setDescription('');
+      setSelectedContacts([]);
+    }
+  }, [visible, isEditing]);
 
   const handleSave = () => {
     if (!groupName.trim()) {

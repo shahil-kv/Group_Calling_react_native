@@ -1,14 +1,6 @@
+import { Contact } from '@/types/contact.types';
 import * as Contacts from 'expo-contacts';
-import { Platform } from 'react-native';
 import { create } from 'zustand';
-
-export type Contact = {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  email?: string;
-  photo?: string;
-};
 
 type ContactStore = {
   contacts: Contact[];
@@ -101,9 +93,9 @@ export const useContactStore = create<ContactStore>((set, get) => ({
             name: contact.name,
             phoneNumber: contact.phoneNumbers?.[0]?.number || '',
             email: contact.emails?.[0]?.email,
-            photo: contact.imageAvailable && contact.image ?
-              (Platform.OS === 'android' ? contact.image.uri : contact.image.uri) :
-              undefined,
+            address: undefined,
+            notes: undefined,
+            createdAt: new Date().toISOString(),
           }));
 
         set({ contacts: formattedContacts });

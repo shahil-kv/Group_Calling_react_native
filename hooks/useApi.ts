@@ -26,6 +26,13 @@ const formatErrorMessage = (error: unknown): string => {
     }
 };
 
+interface ApiResponse<T> {
+    statusCode: number;
+    data: T;
+    message: string;
+    success: boolean;
+}
+
 /**
  * @function usePost
  * @description Hook for making POST requests with built-in error handling and loading states
@@ -60,9 +67,9 @@ export const usePost = <TData = unknown, TVariables = unknown>(
                 if (shouldShowLoader) {
                     showLoader();
                 }
-                const response = await api.post<TData>(endpoint, variables);
-                if (showSuccessToast) {
-                    toast.showSuccess('Operation completed successfully');
+                const response = await api.post<ApiResponse<TData>>(endpoint, variables);
+                if (showSuccessToast && response.data.message) {
+                    toast.showSuccess(response.data.message);
                 }
                 return response.data;
             } catch (error) {
@@ -105,18 +112,18 @@ export const usePost = <TData = unknown, TVariables = unknown>(
  * // Use the mutation
  * mutate();
  */
-export const useGet = <TData = unknown>(endpoint: string, config?: MutationConfig) => {
+export const useGet = <TData = any, TVariables = any>(endpoint: string, config?: MutationConfig) => {
     const toast = useToast();
     const { showLoader, hideLoader } = useLoader();
     const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true } = config || {};
 
     return useMutation({
-        mutationFn: async () => {
+        mutationFn: async (variables?: TVariables) => {
             try {
                 if (shouldShowLoader) {
                     showLoader();
                 }
-                const response = await api.get<TData>(endpoint);
+                const response = await api.get<TData>(endpoint, { params: variables });
                 if (showSuccessToast) {
                     toast.showSuccess('Data fetched successfully');
                 }

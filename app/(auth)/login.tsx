@@ -1,5 +1,5 @@
-import { Link, router } from "expo-router";
-import React from "react";
+import { Link, router } from 'expo-router';
+import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,34 +7,34 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
-import * as yup from "yup";
-import Button from "../../components/Button";
-import { DynamicForm } from "../../components/DynamicForm";
-import { useAuth } from "../../contexts/AuthContext";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import * as yup from 'yup';
+import Button from '../../components/Button';
+import { DynamicForm } from '../../components/DynamicForm';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Validation Schema
 const schema = yup.object({
-  phoneNumber: yup.string().required("Phone number is required"),
-  password: yup.string().required("Password is required"),
+  phoneNumber: yup.string().required('Phone number is required'),
+  password: yup.string().required('Password is required'),
 });
 
 type FormData = yup.InferType<typeof schema>;
 
 const formFields = [
   {
-    name: "phoneNumber",
-    label: "Phone Number",
-    type: "phone" as const,
-    placeholder: "Enter your phone number",
-    defaultCode: "+91",
+    name: 'phoneNumber',
+    label: 'Phone Number',
+    type: 'phone' as const,
+    placeholder: 'Enter your phone number',
+    defaultCode: '+91',
   },
   {
-    name: "password",
-    label: "Password",
-    type: "password" as const,
-    placeholder: "Enter your password",
+    name: 'password',
+    label: 'Password',
+    type: 'password' as const,
+    placeholder: 'Enter your password',
   },
 ];
 
@@ -44,15 +44,15 @@ export default function LoginScreen() {
   const onSubmit = async (data: FormData) => {
     try {
       await signIn(data.phoneNumber, data.password);
-      router.replace("/(tabs)");
+      router.replace('/(tabs)');
     } catch (error) {
-      console.error("Login error:", error);
+      console.error('Login error:', error);
     }
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-background"
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -61,9 +61,7 @@ export default function LoginScreen() {
             <View className="items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary">
               <Icon name="phone" size={32} color="#FFFFFF" />
             </View>
-            <Text className="text-3xl font-bold text-center text-dark">
-              SequentiCall
-            </Text>
+            <Text className="text-3xl font-bold text-center text-dark">SequentiCall</Text>
             <Text className="mt-2 text-center text-gray-500">
               Connect with your groups efficiently
             </Text>
@@ -73,7 +71,7 @@ export default function LoginScreen() {
             fields={formFields}
             onSubmit={onSubmit}
             validationSchema={schema}
-            renderButton={(handleSubmit) => (
+            renderButton={handleSubmit => (
               <Button
                 title="Login"
                 onPress={handleSubmit}

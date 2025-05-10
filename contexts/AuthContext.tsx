@@ -46,49 +46,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
   const { showLoader, hideLoader } = useLoader();
 
-  const { mutateAsync: login } = usePost<ApiResponse<LoginResponse>>('/user/login', {
+  const { mutateAsync: login } = usePost<LoginResponse>('/user/login', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
     showLoader: true,
   });
 
-  const { mutateAsync: refreshToken } = usePost<ApiResponse<RefreshTokenResponse>>(
-    '/user/refresh-token',
-    {
-      invalidateQueriesOnSuccess: ['users', 'auth'],
-      showErrorToast: false,
-      showSuccessToast: false,
-      showLoader: false,
-    }
-  );
+  const { mutateAsync: refreshToken } = usePost<RefreshTokenResponse>('/user/refresh-token', {
+    invalidateQueriesOnSuccess: ['users', 'auth'],
+    showErrorToast: false,
+    showSuccessToast: false,
+    showLoader: false,
+  });
 
-  const { mutateAsync: logout } = usePost<ApiResponse<null>>('user/logout', {
+  const { mutateAsync: logout } = usePost<null>('user/logout', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
     showLoader: true,
   });
 
-  const { mutateAsync: checkPremium } = usePost<ApiResponse<PremiumStatusResponse>>(
-    '/user/premium-status',
-    {
-      invalidateQueriesOnSuccess: ['users', 'auth'],
-      showErrorToast: true,
-      showSuccessToast: false,
-      showLoader: false,
-    }
-  );
+  const { mutateAsync: checkPremium } = usePost<PremiumStatusResponse>('/user/premium-status', {
+    invalidateQueriesOnSuccess: ['users', 'auth'],
+    showErrorToast: true,
+    showSuccessToast: false,
+    showLoader: false,
+  });
 
-  const { mutateAsync: upgradePremium } = usePost<ApiResponse<PremiumStatusResponse>>(
-    '/user/upgrade-premium',
-    {
-      invalidateQueriesOnSuccess: ['users', 'auth'],
-      showErrorToast: true,
-      showSuccessToast: true,
-      showLoader: true,
-    }
-  );
+  const { mutateAsync: upgradePremium } = usePost<PremiumStatusResponse>('/user/upgrade-premium', {
+    invalidateQueriesOnSuccess: ['users', 'auth'],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: true,
+  });
 
   /**
    * @function loadStoredAuth
@@ -106,12 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const loadStoredAuth = useCallback(async () => {
     try {
-      // First check if we have stored tokens
       const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
+      const storedUserData = await AsyncStorage.getItem('user_data');
+
       if (!storedRefreshToken) {
         setUser(null);
         setTokens(null);
-        // Force navigation to login regardless of current route
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
         return;
       }
@@ -120,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await refreshToken({
           refreshToken: storedRefreshToken,
         });
+
         const { tokens: newTokens } = response.data;
 
         // Store new tokens
@@ -127,24 +119,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await AsyncStorage.setItem('refresh_token', newTokens.refreshToken);
         setTokens(newTokens);
 
-        // Get user data from the response if available, or keep existing user
-        if (response.data.user) {
-          setUser(response.data.user);
+        // Use stored user data if available
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setUser(userData);
         }
       } catch (error) {
         console.error('Token refresh failed:', error);
-        // Clear everything and force login
         setUser(null);
         setTokens(null);
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       }
     } catch (error: any) {
       console.error('Auth check failed:', error);
-      // Clear everything and force login
       setUser(null);
       setTokens(null);
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
       router.replace(AUTH_CONFIG.ROUTES.LOGIN);
     } finally {
       setIsLoading(false);
@@ -169,17 +160,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await login({ phoneNumber, password });
 
+      if (!response?.data) {
+        console.error('Invalid response structure:', response);
+        throw new Error('Invalid response structure from login API');
+      }
+
       const { user, tokens: newTokens } = response.data;
 
-      // Store both tokens
+      if (!user || !newTokens) {
+        console.error('Missing data in response:', { user, tokens: newTokens });
+        throw new Error('Missing user or tokens in login response');
+      }
+
+      // Store tokens and user data
       await AsyncStorage.setItem('access_token', newTokens.accessToken);
       await AsyncStorage.setItem('refresh_token', newTokens.refreshToken);
+      await AsyncStorage.setItem('userId', user.id.toString());
+      await AsyncStorage.setItem('user_data', JSON.stringify(user));
 
       setUser(user);
       setTokens(newTokens);
+
       router.replace(AUTH_CONFIG.ROUTES.TABS);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error details:', error);
       throw error;
     }
   };
@@ -197,24 +201,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const signOut = async () => {
     try {
-      // First try to call logout API
       await logout({});
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
       try {
-        // Clear all stored data
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-
-        // Clear user state
+        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
         setUser(null);
         setTokens(null);
-
-        // Force navigation to login
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       } catch (cleanupError) {
         console.error('Error during cleanup:', cleanupError);
-        // Even if cleanup fails, try to redirect to login
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       }
     }

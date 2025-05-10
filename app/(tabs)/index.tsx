@@ -40,7 +40,6 @@ export default function HomeScreen() {
 
   const handleUpgrade = () => {
     // Handle upgrade logic - would typically navigate to a subscription page
-    console.log('Navigate to upgrade screen');
   };
 
   return (

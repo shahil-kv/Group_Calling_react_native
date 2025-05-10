@@ -135,8 +135,8 @@ export default function SignupScreen() {
         opsMode: 'INSERT',
         role: 'USER',
       };
-   const result=   await signup(payload);
-   
+      const result = await signup(payload);
+
       setPhoneNumber(data.phoneNumber);
       setShowOTP(true);
     } catch (error) {
@@ -161,7 +161,6 @@ export default function SignupScreen() {
 
     try {
       const phoneNumberCleaned = phoneNumber.replace(/\s+/g, '');
-      console.log('phoneNumber', phoneNumberCleaned);
       await verifyOTP({
         phoneNumber: phoneNumberCleaned,
         otp,
@@ -213,11 +212,7 @@ export default function SignupScreen() {
             />
           ) : (
             <View className="space-y-4">
-              <CustomOTPInput
-                value={otp}
-                onChange={setOtp}
-                label="Enter OTP"
-              />
+              <CustomOTPInput value={otp} onChange={setOtp} label="Enter OTP" />
               <Button title="Verify OTP" onPress={handleOTPSubmit} fullWidth size="lg" />
             </View>
           )}

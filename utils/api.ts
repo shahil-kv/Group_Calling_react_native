@@ -6,7 +6,6 @@ import { ApiResponse } from '../types/auth.types';
 // Use environment variable or fallback to your actual backend server
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL as string
 
-console.log('Current BASE_URL:', BASE_URL);
 
 export const api = axios.create({
     baseURL: BASE_URL,
@@ -21,7 +20,6 @@ api.interceptors.request.use(
     async (config) => {
         try {
             const token = await AsyncStorage.getItem('access_token');
-            console.log('Making request to:', BASE_URL + config.url);
 
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
@@ -59,7 +57,7 @@ api.interceptors.response.use(
                 });
 
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
-                
+
                 try {
                     await AsyncStorage.setItem('access_token', accessToken);
                     await AsyncStorage.setItem('refresh_token', newRefreshToken);

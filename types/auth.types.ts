@@ -16,16 +16,28 @@ export type UserRole = 'USER' | 'ADMIN';
  * @description Represents a user in the system
  * @property {number} id - Unique identifier for the user
  * @property {string} phone_number - User's phone number
+ * @property {string} password_hash - User's password hash
+ * @property {string} full_name - User's full name
+ * @property {string} email - User's email
+ * @property {boolean} is_phone_verified - Whether the user's phone is verified
+ * @property {boolean} is_premium - Whether the user has premium subscription
+ * @property {string | null} premium_expiry - Premium subscription expiry date
  * @property {UserRole} role - User's role in the system
- * @property {boolean} [is_premium] - Whether the user has premium subscription
- * @property {string | null} [premium_expiry] - Premium subscription expiry date
+ * @property {string} created_at - User's creation date
+ * @property {string} updated_at - User's last update date
  */
 export interface User {
     id: number;
     phone_number: string;
+    password_hash: string;
+    full_name: string;
+    email: string;
+    is_phone_verified: boolean;
+    is_premium: boolean;
+    premium_expiry: string | null;
     role: UserRole;
-    is_premium?: boolean;
-    premium_expiry?: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 /**
@@ -43,14 +55,16 @@ export interface AuthTokens {
  * @interface ApiResponse
  * @description Standard API response structure
  * @template T - Type of the response data
+ * @property {number} statusCode - HTTP status code
  * @property {T} data - Response data
  * @property {string} message - Response message
- * @property {number} status - HTTP status code
+ * @property {boolean} success - Whether the request was successful
  */
 export interface ApiResponse<T> {
+    statusCode: number;
     data: T;
     message: string;
-    status: number;
+    success: boolean;
 }
 
 /**
@@ -67,12 +81,12 @@ export interface LoginResponse {
 /**
  * @interface RefreshTokenResponse
  * @description Response structure for token refresh API
+ * @property {User} user - Updated user data
  * @property {AuthTokens} tokens - New authentication tokens
- * @property {User} [user] - Optional updated user data
  */
 export interface RefreshTokenResponse {
+    user: User;
     tokens: AuthTokens;
-    user?: User;
 }
 
 /**
