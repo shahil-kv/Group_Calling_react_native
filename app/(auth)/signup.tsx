@@ -195,7 +195,7 @@ export default function SignupScreen() {
             <View className="items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary">
               <Icon name="phone" size={30} color="#fff" />
             </View>
-            <Text className="text-3xl font-bold text-center text-dark">SequentiCall</Text>
+            <Text className="text-3xl font-bold text-center text-dark">mass caller</Text>
             <Text className="mt-2 text-center text-gray-500">
               {showOTP ? 'Verify your phone number' : 'Create your account'}
             </Text>

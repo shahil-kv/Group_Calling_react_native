@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "testing_shahil",
-    "slug": "testing_shahil",
+    "name": "mass_caller",
+    "slug": "mass_caller",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,14 +22,15 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.adhilansari.testing_shahil",
+      "package": "com.adhilansari.mass_caller",
       "permissions": [
         "android.permission.CALL_PHONE",
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS",
-        "CAMERA", "RECORD_AUDIO",
-        "android.permission.CAMERA"      
+        "CAMERA",
+        "RECORD_AUDIO",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
