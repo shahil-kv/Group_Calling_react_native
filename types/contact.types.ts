@@ -1,4 +1,3 @@
-
 // Represents a phone number associated with a contact
 interface PhoneNumber {
     id: string;
@@ -35,9 +34,10 @@ export interface Contact {
 
 export interface Group {
     id: string;
+    group_id: string;
     name: string;
     description?: string;
-    contacts: Contact[];
+    contacts: any[];
     createdAt: string;
 }
 

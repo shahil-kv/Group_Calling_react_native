@@ -1,8 +1,7 @@
 import CreateGroupModal from '@/components/CreateGroupModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
-import { Contact, Group } from '@/types/contact.types';
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import { Group } from '@/types/contact.types';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
 import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
@@ -108,26 +107,8 @@ const EmptyState: React.FC<{ searchQuery: string; onCreateGroup: () => void }> =
   )
 );
 
-const OfflineBanner: React.FC = memo(() => (
-  <View className="p-2 mb-4 bg-yellow-100 rounded-lg">
-    <Text className="text-center text-yellow-800">
-      You're offline. Changes will be synced when you're back online.
-    </Text>
-  </View>
-));
-
 export default function GroupsScreen() {
-  const {
-    groups,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    setGroups,
-    isOffline,
-    setOfflineMode,
-    offlineChanges,
-    clearOfflineChanges,
-  } = useGroupStore();
+  const { groups, addGroup, updateGroup, deleteGroup, setGroups } = useGroupStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -150,7 +131,7 @@ export default function GroupsScreen() {
   });
 
   const fetchGroups = useCallback(async () => {
-    if (!user?.id || isOffline) return;
+    if (!user?.id) return;
     try {
       const response = await GetGroups({ userId: user.id });
       if (response?.data) {
@@ -203,97 +184,22 @@ export default function GroupsScreen() {
       }
     } catch (error) {
       console.error('Error fetching groups:', error);
-      if (!isOffline) {
-        Alert.alert('Error', 'Failed to fetch groups. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to fetch groups. Please try again.');
     }
-  }, [user?.id, GetGroups, CrudGroup, isOffline]);
-
-  // Monitor network status and sync changes when back online
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(async (state: NetInfoState) => {
-      const wasOffline = !state.isConnected;
-      setOfflineMode(!state.isConnected);
-
-      // If we're back online and have offline changes, sync them
-      if (wasOffline && state.isConnected && offlineChanges.length > 0) {
-        try {
-          // First fetch latest data
-          await fetchGroups();
-
-          // Then apply offline changes
-          for (const change of offlineChanges) {
-            switch (change.type) {
-              case 'ADD':
-                await CrudGroup({
-                  userId: user?.id,
-                  groupId: 0,
-                  groupName: change.data.name,
-                  description: change.data.description,
-                  contacts: change.data.contacts.map((contact: Contact) => ({
-                    name: contact.name,
-                    contactId: contact.id,
-                    phoneNumber: contact.phoneNumbers[0]?.number || '',
-                  })),
-                  opsMode: 'INSERT',
-                });
-                break;
-              case 'UPDATE':
-                await CrudGroup({
-                  userId: user?.id,
-                  groupId: change.data.id,
-                  groupName: change.data.updates.name,
-                  description: change.data.updates.description,
-                  contacts:
-                    change.data.updates.contacts?.map((contact: Contact) => ({
-                      name: contact.name,
-                      contactId: contact.id,
-                      phoneNumber: contact.phoneNumbers[0]?.number || '',
-                    })) || [],
-                  opsMode: 'UPDATE',
-                });
-                break;
-              case 'DELETE':
-                await CrudGroup({
-                  userId: user?.id,
-                  groupId: change.data.id,
-                  opsMode: 'DELETE',
-                });
-                break;
-            }
-          }
-
-          // Clear offline changes after successful sync
-          clearOfflineChanges();
-
-          // Fetch latest data again to ensure everything is in sync
-          await fetchGroups();
-        } catch (error) {
-          console.error('Error syncing offline changes:', error);
-          Alert.alert('Sync Error', 'Failed to sync offline changes. Please try again.');
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [setOfflineMode, offlineChanges, clearOfflineChanges, user?.id, CrudGroup, fetchGroups]);
+  }, [user?.id, GetGroups]);
 
   const handleRefresh = useCallback(async () => {
-    if (isOffline) {
-      Alert.alert('Offline', 'Cannot refresh while offline');
-      return;
-    }
     setIsRefreshing(true);
     await fetchGroups();
     setIsRefreshing(false);
-  }, [fetchGroups, isOffline]);
+  }, [fetchGroups]);
 
   useEffect(() => {
     fetchGroups();
   }, [fetchGroups]);
 
   const handleAddGroup = useCallback(
-    async (groupData: { name: string; description: string; contacts: Contact[] }) => {
+    async (groupData: { name: string; description: string; contacts: any }) => {
       try {
         if (!user) return;
         const payload = {
@@ -301,17 +207,11 @@ export default function GroupsScreen() {
           groupId: isEditing && currentGroupId ? currentGroupId : 0,
           groupName: groupData.name,
           description: groupData.description,
-          contacts: groupData.contacts.map((contact: Contact) => ({
-            name: contact.name,
-            contactId: contact.id,
-            phoneNumber: contact.phoneNumbers[0]?.number || '',
-          })),
+          contacts: groupData.contacts,
           opsMode: isEditing && currentGroupId ? 'UPDATE' : 'INSERT',
         };
 
-        if (!isOffline) {
-          await CrudGroup(payload);
-        }
+        await CrudGroup(payload);
 
         if (isEditing && currentGroupId) {
           updateGroup(currentGroupId, groupData);
@@ -322,12 +222,10 @@ export default function GroupsScreen() {
         clearForm();
       } catch (e) {
         console.error('axios error', e);
-        if (!isOffline) {
-          Alert.alert('Error', 'Failed to save group. Please try again.');
-        }
+        Alert.alert('Error', 'Failed to save group. Please try again.');
       }
     },
-    [isEditing, currentGroupId, updateGroup, addGroup, user, isOffline]
+    [isEditing, currentGroupId, updateGroup, addGroup, user]
   );
 
   const handleEditGroup = useCallback(
@@ -343,15 +241,11 @@ export default function GroupsScreen() {
 
   const deleteGroupFromId = async (id: string) => {
     try {
-      if (!isOffline) {
-        await CrudGroup({ groupId: id, opsMode: 'DELETE', userId: user?.id });
-      }
+      await CrudGroup({ groupId: id, opsMode: 'DELETE', userId: user?.id });
       deleteGroup(id);
     } catch (error) {
       console.error('Error deleting group:', error);
-      if (!isOffline) {
-        Alert.alert('Error', 'Failed to delete group. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to delete group. Please try again.');
     }
   };
 
@@ -393,7 +287,6 @@ export default function GroupsScreen() {
         <Text className="text-2xl font-bold text-dark">Groups</Text>
         <Text className="text-gray-500">Manage your contact groups</Text>
       </View>
-      {isOffline && <OfflineBanner />}
       <View className="flex-row items-center my-4">
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
       </View>
@@ -415,13 +308,7 @@ export default function GroupsScreen() {
           renderItem={({ item }) => (
             <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
           )}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              enabled={!isOffline}
-            />
-          }
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         />
       ) : (
         <EmptyState searchQuery={searchQuery} onCreateGroup={handleCreateGroup} />
