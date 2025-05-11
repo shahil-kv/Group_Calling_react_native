@@ -333,7 +333,7 @@ export default function CreateGroupModal({
                 </View>
 
                 <View>
-                  <Text className="mb-2 font-medium text-gray-700">Description (Optional)</Text>
+                  <Text className="my-2 font-medium text-gray-700">Description (Optional)</Text>
                   <TextInput
                     className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-base"
                     placeholder="Enter description"
@@ -347,7 +347,7 @@ export default function CreateGroupModal({
                 </View>
 
                 <View>
-                  <Text className="mb-2 font-medium text-gray-700">Add Contacts</Text>
+                  <Text className="my-2 font-medium text-gray-700">Add Contacts</Text>
                   <View className="space-y-3">
                     {/* Device Contacts Selector */}
                     <TouchableOpacity
@@ -416,7 +416,7 @@ export default function CreateGroupModal({
                           onPress={handleClearImported}
                           accessibilityLabel="Clear imported contacts"
                         >
-                          <Icon name="close" size={16} color="#ef4444" />
+                          <Icon name="trash" size={16} color="#ef4444" />
                         </TouchableOpacity>
                       ) : (
                         <Icon name="upload" size={16} color="#64748b" />

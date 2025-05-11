@@ -5,7 +5,14 @@ import { useGet, usePost } from '@/hooks/useApi';
 import { Group } from '@/types/contact.types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -70,7 +77,7 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
       </View>
       <View className="flex-row items-center">
         <TouchableOpacity
-          className="p-3 rounded-full "
+          className="p-3 rounded-full"
           onPress={(e) => {
             e.stopPropagation();
             onEdit(group.id);
@@ -353,64 +360,72 @@ export default function GroupsScreen() {
   }, [clearForm]);
 
   return (
-    <SafeAreaView className="flex-1 px-4 bg-background">
-      {/* Header */}
-      <View>
-        <Text className="text-2xl font-bold text-dark">Groups</Text>
-        <Text className="text-gray-500">Manage your contact groups</Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-background">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        style={{ flex: 1 }}
+      >
+        <View className="flex-1 px-4" style={{ paddingBottom: 8 }}>
+          {/* Header */}
+          <View>
+            <Text className="text-2xl font-bold text-dark">Groups</Text>
+            <Text className="text-gray-500">Manage your contact groups</Text>
+          </View>
 
-      {/* Search bar */}
-      <View className="flex-row items-center my-4">
-        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-      </View>
+          {/* Search bar */}
+          <View className="flex-row items-center my-4" accessibilityLabel="Search groups">
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+          </View>
 
-      {/* Create group button */}
-      <View className="mb-4">
-        <TouchableOpacity
-          onPress={handleCreateGroup}
-          className="flex-row items-center justify-center gap-3 py-4 rounded-lg bg-primary"
-          accessibilityLabel="Create new group"
-        >
-          <Icon name="user" size={18} color="#FFFFFF" />
-          <Text className="font-medium text-white">Create New Group</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Create group button */}
+          <View className="mb-4">
+            <TouchableOpacity
+              onPress={handleCreateGroup}
+              className="flex-row items-center justify-center gap-3 py-4 rounded-lg bg-primary"
+              accessibilityLabel="Create new group"
+            >
+              <Icon name="user" size={18} color="#FFFFFF" />
+              <Text className="font-medium text-white">Create New Group</Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Groups list or empty state */}
-      {filteredGroups.length > 0 ? (
-        <FlatList
-          data={filteredGroups}
-          keyExtractor={item => `group-${item.id}`}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={({ item }) => (
-            <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
+          {/* Groups list or empty state */}
+          {filteredGroups.length > 0 ? (
+            <FlatList
+              data={filteredGroups}
+              keyExtractor={item => `group-${item.id}`}
+              contentContainerStyle={{ paddingBottom: 80 }}
+              renderItem={({ item }) => (
+                <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
+              )}
+              refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+            />
+          ) : (
+            <EmptyState searchQuery={searchQuery} onCreateGroup={handleCreateGroup} />
           )}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-        />
-      ) : (
-        <EmptyState searchQuery={searchQuery} onCreateGroup={handleCreateGroup} />
-      )}
+        </View>
 
-      {/* Create/Edit Group Modal */}
-      <CreateGroupModal
-        visible={modalVisible}
-        onClose={() => {
-          setModalVisible(false);
-          clearForm();
-        }}
-        onSave={handleAddGroup}
-        isEditing={isEditing}
-        initialData={
-          isEditing && currentGroupId
-            ? {
-              name: groups.find(g => g.id === currentGroupId)?.name || '',
-              description: groups.find(g => g.id === currentGroupId)?.description || '',
-              contacts: groups.find(g => g.id === currentGroupId)?.contacts || [],
-            }
-            : undefined
-        }
-      />
+        {/* Create/Edit Group Modal */}
+        <CreateGroupModal
+          visible={modalVisible}
+          onClose={() => {
+            setModalVisible(false);
+            clearForm();
+          }}
+          onSave={handleAddGroup}
+          isEditing={isEditing}
+          initialData={
+            isEditing && currentGroupId
+              ? {
+                name: groups.find(g => g.id === currentGroupId)?.name || '',
+                description: groups.find(g => g.id === currentGroupId)?.description || '',
+                contacts: groups.find(g => g.id === currentGroupId)?.contacts || [],
+              }
+              : undefined
+          }
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
