@@ -1,4 +1,5 @@
 import * as Contacts from 'expo-contacts';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,28 +21,26 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 const MODAL_HEIGHT = Math.floor(Dimensions.get('window').height * 0.85);
 const CONTACTS_PER_PAGE = 40;
-type Contact = Contacts.Contact;
 
 interface ContactSelectorProps {
   visible: boolean;
   onClose: () => void;
-  onDone: (selectedContacts: Contact[]) => void;
-  initialSelectedContacts?: Contact[];
+  onDone: (selectedContacts: Contacts.Contact[]) => void;
+  initialSelectedContacts?: Contacts.Contact[];
 }
 
 interface ContactItemProps {
-  item: Contact;
+  item: Contacts.Contact;
   isSelected: boolean;
-  toggleContact: (c: Contact) => void;
+  toggleContact: (c: Contacts.Contact) => void;
 }
 
-// Memoized contact item for performance
 const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps) => {
   const displayName = item.name || 'Unknown Contact';
   const phoneNumber = item.phoneNumbers?.[0]?.number || 'No number';
   const initials = displayName
     .split(' ')
-    .map(word => word[0])
+    .map((word: string) => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -81,10 +80,9 @@ export default function ContactSelector({
   onDone,
   initialSelectedContacts = [],
 }: ContactSelectorProps) {
-  // State
-  const [allContacts, setAllContacts] = useState<Contact[]>([]);
-  const [displayedContacts, setDisplayedContacts] = useState<Contact[]>([]);
-  const [selectedContacts, setSelectedContacts] = useState<Contact[]>(initialSelectedContacts);
+  const [allContacts, setAllContacts] = useState<Contacts.Contact[]>([]);
+  const [displayedContacts, setDisplayedContacts] = useState<Contacts.Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Contacts.Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -94,6 +92,36 @@ export default function ContactSelector({
   const [fabVisible, setFabVisible] = useState(true);
   const fabAnim = useState(new Animated.Value(0))[0];
 
+  // Normalize phone numbers
+  const normalizePhoneNumber = (phone: string): string => {
+    const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
+    if (phoneNumber && phoneNumber.isValid()) {
+      return phoneNumber.formatInternational();
+    }
+    return phone;
+  };
+
+  // Clean contact ID for consistency
+  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
+
+  // Initialize selected contacts when the modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedContacts(
+        initialSelectedContacts.map(contact => ({
+          ...contact,
+          id: cleanContactId(contact.id as string),
+          phoneNumbers: contact?.phoneNumbers?.map(phone => ({
+            ...phone,
+            number: normalizePhoneNumber(phone.number || ''),
+            digits: phone.number?.replace(/\D/g, '') || '',
+            countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
+          })),
+        }))
+      );
+    }
+  }, [visible, initialSelectedContacts]);
+
   // Load contacts on open
   useEffect(() => {
     if (!visible) return;
@@ -101,10 +129,16 @@ export default function ContactSelector({
     (async () => {
       try {
         const { status } = await Contacts.requestPermissionsAsync();
-        if (status !== 'granted') throw new Error('Permission denied');
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Please grant access to contacts.');
+          return;
+        }
         const { data } = await Contacts.getContactsAsync({
           fields: [
+            Contacts.Fields.ID,
             Contacts.Fields.Name,
+            Contacts.Fields.FirstName,
+            Contacts.Fields.LastName,
             Contacts.Fields.PhoneNumbers,
             Contacts.Fields.Image,
             Contacts.Fields.Emails,
@@ -112,10 +146,23 @@ export default function ContactSelector({
           ],
           pageSize: 10000,
         });
-        // Filter out contacts without name or phone
-        const filtered = data.filter(c => c.name && c.phoneNumbers && c.phoneNumbers.length > 0);
-        // Sort alphabetically
-        filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        const filtered = data
+          .filter(c => c.name && c.phoneNumbers && c.phoneNumbers.length > 0)
+          .map(contact => ({
+            ...contact,
+            id: cleanContactId(
+              contact.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+            ),
+            phoneNumbers: contact?.phoneNumbers?.map(phone => ({
+              ...phone,
+              number: normalizePhoneNumber(phone.number || ''),
+              digits: phone.number?.replace(/\D/g, '') || '',
+              countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
+            })),
+          }))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
         setAllContacts(filtered);
         setDisplayedContacts(filtered.slice(0, CONTACTS_PER_PAGE));
         setPage(1);
@@ -128,19 +175,19 @@ export default function ContactSelector({
     })();
   }, [visible]);
 
-  // Search logic
   const filteredContacts = searchQuery
     ? allContacts.filter(contact => {
         const q = searchQuery.toLowerCase();
         return (
           (contact.name && contact.name.toLowerCase().includes(q)) ||
           (contact.phoneNumbers &&
-            contact.phoneNumbers.some(p => p.number?.toLowerCase().includes(q)))
+            contact.phoneNumbers.some((p: Contacts.PhoneNumber) =>
+              p.number?.toLowerCase().includes(q)
+            ))
         );
       })
     : displayedContacts;
 
-  // Infinite scroll
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore || searchQuery) return;
     setIsLoadingMore(true);
@@ -154,7 +201,6 @@ export default function ContactSelector({
     }, 300);
   }, [isLoadingMore, hasMore, searchQuery, page, allContacts]);
 
-  // Keyboard listeners for FAB
   useEffect(() => {
     let showSub: EmitterSubscription, hideSub: EmitterSubscription;
     if (Platform.OS === 'ios') {
@@ -202,24 +248,23 @@ export default function ContactSelector({
     };
   }, [fabAnim]);
 
-  // Selection logic
-  const toggleContact = useCallback((contact: Contact) => {
+  const toggleContact = useCallback((contact: Contacts.Contact) => {
     setSelectedContacts(prev =>
       prev.some(c => c.id === contact.id)
         ? prev.filter(c => c.id !== contact.id)
         : [...prev, contact]
     );
   }, []);
+
   const clearSelection = useCallback(() => setSelectedContacts([]), []);
+
   const selectAll = useCallback(() => setSelectedContacts(filteredContacts), [filteredContacts]);
 
-  // Render
   if (!visible) return null;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 rounded-t-[30px] bg-white overflow-hidden">
-        {/* Header and search bar */}
         <View className="p-4 border-b border-gray-100">
           <View className="flex-row items-center justify-between mb-3">
             <View>
@@ -274,7 +319,6 @@ export default function ContactSelector({
             </View>
           </View>
         </View>
-        {/* List with KeyboardAvoidingView */}
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -326,7 +370,6 @@ export default function ContactSelector({
             />
           )}
         </KeyboardAvoidingView>
-        {/* Floating Done Button (FAB) */}
         {fabVisible && (
           <Animated.View
             className="absolute left-0 right-0 z-50 items-center"
@@ -340,7 +383,6 @@ export default function ContactSelector({
               className="min-w-[180px] items-center justify-center py-3.5 rounded-3xl bg-primary shadow-lg"
               onPress={() => {
                 onDone(selectedContacts);
-                onClose();
               }}
               accessibilityLabel="Done selecting contacts"
               activeOpacity={0.85}

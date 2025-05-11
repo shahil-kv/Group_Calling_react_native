@@ -2,6 +2,8 @@ import CreateGroupModal from '@/components/CreateGroupModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
 import { Group } from '@/types/contact.types';
+import * as Contacts from 'expo-contacts';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
 import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
@@ -20,6 +22,15 @@ interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
 }
+
+// Utility to normalize phone numbers
+const normalizePhoneNumber = (phone: string): string => {
+  const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
+  if (phoneNumber && phoneNumber.isValid()) {
+    return phoneNumber.formatInternational();
+  }
+  return phone;
+};
 
 // Components
 const SearchBar: React.FC<SearchBarProps> = memo(({ value, onChangeText }) => (
@@ -81,7 +92,11 @@ const GroupItem: React.FC<GroupItemProps> = memo(({ group, onEdit, onDelete }) =
       </View>
     </View>
     {group.description ? (
-      <Text className="mt-2 text-gray-500 pl-13">{group.description}</Text>
+      <View>
+        <Text className="mt-2 text-black pl-13">{group.group_id}</Text>
+        <Text className="mt-2 text-black pl-13">{group.id}</Text>
+        <Text className="mt-2 text-gray-500 pl-13">{group.description}</Text>
+      </View>
     ) : null}
   </TouchableOpacity>
 ));
@@ -130,103 +145,7 @@ export default function GroupsScreen() {
     showLoader: true,
   });
 
-  const fetchGroups = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const response = await GetGroups({ userId: user.id });
-      if (response?.data) {
-        const transformedGroups = response.data.map(
-          (group: {
-            id: number;
-            group_name: string;
-            description: string;
-            contacts: Array<{
-              id: number;
-              contact_id: string | null;
-              name: string;
-              phone_number: string;
-            }>;
-          }) => ({
-            id: group.id.toString(),
-            name: group.group_name,
-            description: group.description,
-            contacts: group.contacts.map(
-              (contact: {
-                id: number;
-                contact_id: string | null;
-                name: string;
-                phone_number: string;
-              }) => ({
-                id: contact.contact_id || contact.id.toString(),
-                name: contact.name,
-                firstName: contact.name.split(' ')[0],
-                lastName: contact.name.split(' ').slice(1).join(' '),
-                contactType: 'person',
-                imageAvailable: false,
-                phoneNumbers: [
-                  {
-                    id: contact.id.toString(),
-                    label: 'mobile',
-                    number: contact.phone_number,
-                    digits: contact.phone_number.replace(/\D/g, ''),
-                    countryCode: contact.phone_number.startsWith('+')
-                      ? contact.phone_number.split(' ')[0]
-                      : '',
-                  },
-                ],
-                addresses: [],
-              })
-            ),
-            createdAt: new Date().toISOString(),
-          })
-        );
-        setGroups(transformedGroups);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-      Alert.alert('Error', 'Failed to fetch groups. Please try again.');
-    }
-  }, [user?.id, GetGroups]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchGroups();
-    setIsRefreshing(false);
-  }, [fetchGroups]);
-
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
-
-  const handleAddGroup = useCallback(
-    async (groupData: { name: string; description: string; contacts: any }) => {
-      try {
-        if (!user) return;
-        const payload = {
-          userId: user.id,
-          groupId: isEditing && currentGroupId ? currentGroupId : 0,
-          groupName: groupData.name,
-          description: groupData.description,
-          contacts: groupData.contacts,
-          opsMode: isEditing && currentGroupId ? 'UPDATE' : 'INSERT',
-        };
-
-        await CrudGroup(payload);
-
-        if (isEditing && currentGroupId) {
-          updateGroup(currentGroupId, groupData);
-        } else {
-          addGroup(groupData.name, groupData.description, groupData.contacts);
-        }
-        setModalVisible(false);
-        clearForm();
-      } catch (e) {
-        console.error('axios error', e);
-        Alert.alert('Error', 'Failed to save group. Please try again.');
-      }
-    },
-    [isEditing, currentGroupId, updateGroup, addGroup, user]
-  );
+  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
 
   const handleEditGroup = useCallback(
     (groupId: string) => {
@@ -258,6 +177,119 @@ export default function GroupsScreen() {
     },
     [deleteGroupFromId]
   );
+
+  const handleAddGroup = useCallback(
+    async (groupData: { name: string; description: string; contacts: Contacts.Contact[] }) => {
+      try {
+        if (!user) return;
+        const payload = {
+          userId: user.id,
+          groupId: isEditing && currentGroupId ? currentGroupId : 0,
+          groupName: groupData.name,
+          description: groupData.description,
+          contacts: groupData.contacts.map(contact => ({
+            ...contact,
+            id: cleanContactId(
+              contact.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+            ),
+            phoneNumbers: contact?.phoneNumbers?.map(phone => ({
+              ...phone,
+              number: normalizePhoneNumber(phone.number || ''),
+              digits: phone.number?.replace(/\D/g, '') || '',
+              countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
+            })),
+          })),
+          opsMode: isEditing && currentGroupId ? 'UPDATE' : 'INSERT',
+        };
+
+        await CrudGroup(payload);
+
+        if (isEditing && currentGroupId) {
+          updateGroup(currentGroupId, groupData);
+        } else {
+          addGroup(groupData.name, groupData.description, groupData.contacts);
+        }
+        setModalVisible(false);
+        clearForm();
+      } catch (e) {
+        console.error('Axios error:', e);
+        Alert.alert('Error', 'Failed to save group. Please try again.');
+      } finally {
+        fetchGroups();
+      }
+    },
+    [isEditing, currentGroupId, updateGroup, addGroup, user, CrudGroup]
+  );
+
+  const fetchGroups = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await GetGroups({
+        userId: user.id,
+      });
+      if (response?.data) {
+        const transformedGroups = response.data.map(
+          (group: {
+            id: number;
+            group_name: string;
+            description: string;
+            contacts: Array<{
+              id: number;
+              contact_id: string | null;
+              name: string;
+              first_name: string | null;
+              last_name: string | null;
+              phone_number: string;
+              country_code: string;
+              raw_contact: any;
+            }>;
+          }) => ({
+            id: group.id.toString(),
+            name: group.group_name,
+            description: group.description,
+            contacts: group.contacts.map(contact => {
+              const rawContact = contact.raw_contact || {};
+              const normalizedPhone = normalizePhoneNumber(contact.phone_number);
+              return {
+                id: cleanContactId(contact.contact_id || contact.id.toString()),
+                name: contact.name,
+                firstName: contact.first_name || contact.name.split(' ')[0],
+                lastName: contact.last_name || contact.name.split(' ').slice(1).join(' '),
+                contactType: 'person' as const,
+                imageAvailable: rawContact.imageAvailable || false,
+                phoneNumbers: [
+                  {
+                    id: contact.id.toString(),
+                    label: 'mobile',
+                    number: normalizedPhone,
+                    digits: normalizedPhone.replace(/\D/g, ''),
+                    countryCode: contact.country_code || normalizedPhone.split(' ')[0] || '',
+                  },
+                ],
+                addresses: rawContact.addresses || [],
+              };
+            }),
+            createdAt: new Date().toISOString(),
+          })
+        );
+
+        setGroups(transformedGroups);
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      Alert.alert('Error', 'Failed to fetch groups. Please try again.');
+    }
+  }, [user?.id, GetGroups, deleteGroup]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchGroups();
+    setIsRefreshing(false);
+  }, [fetchGroups]);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
 
   const clearForm = useCallback(() => {
     setCurrentGroupId(null);

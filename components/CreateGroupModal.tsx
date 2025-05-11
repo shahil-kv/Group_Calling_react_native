@@ -1,6 +1,7 @@
-import { Contact } from '@/types/contact.types';
+import * as Contacts from 'expo-contacts';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,12 +22,12 @@ import ContactSelector from './ContactSelector';
 interface CreateGroupModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (groupData: { name: string; description: string; contacts: Contact[] }) => void;
+  onSave: (groupData: { name: string; description: string; contacts: Contacts.Contact[] }) => void;
   isEditing?: boolean;
   initialData?: {
     name: string;
     description: string;
-    contacts: Contact[];
+    contacts: Contacts.Contact[];
   };
 }
 
@@ -37,14 +38,14 @@ export default function CreateGroupModal({
   isEditing = false,
   initialData,
 }: CreateGroupModalProps) {
-  // State for group fields
   const [groupName, setGroupName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
-  const [selectedContacts, setSelectedContacts] = useState<Contact[]>(initialData?.contacts || []);
+  const [selectedContacts, setSelectedContacts] = useState<Contacts.Contact[]>(
+    initialData?.contacts || []
+  );
   const [showContactSelector, setShowContactSelector] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Sync state with initialData when editing
   useEffect(() => {
     if (isEditing && initialData) {
       setGroupName(initialData.name || '');
@@ -53,7 +54,6 @@ export default function CreateGroupModal({
     }
   }, [isEditing, initialData]);
 
-  // Reset form when modal becomes visible and not in editing mode
   useEffect(() => {
     if (visible && !isEditing) {
       setGroupName('');
@@ -62,114 +62,115 @@ export default function CreateGroupModal({
     }
   }, [visible, isEditing]);
 
-  const convertToContact = (row: any): Contact | null => {
-    // Skip invalid rows
+  const normalizePhoneNumber = (phone: string): string => {
+    const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
+    if (phoneNumber && phoneNumber.isValid()) {
+      return phoneNumber.formatInternational();
+    }
+    return phone;
+  };
+
+  const getDigits = (phone: string): string => {
+    return phone.replace(/\D/g, '');
+  };
+
+  const convertToContact = (row: any, defaultCountry = 'IN'): Contacts.Contact | null => {
     if (!row || typeof row !== 'object') return null;
 
-    // Get name and phone with fallbacks
     const name = row.name || row.Name || '';
     const phone = row.phone || row.Phone || row.phoneNumber || row.PhoneNumber || '';
 
-    // Skip if no name or phone
     if (!name || !phone) return null;
 
-    const [firstName = '', lastName = ''] = name.split(' ');
-
-    // {"contacts": [{"contactType": "person", "firstName": "Adhil", "id": "EB5F4CFC-D759-4478-8A52-5EA0B7F527D3", "imageAvailable": false, "name": "Adhil", "phoneNumbers": [Array]}], "description": "xxf", "groupId": 0, "groupName": "ss", "opsMode": "INSERT", "userId": 33}
-
-    // make the contact section like this above
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const digits = getDigits(normalizedPhone);
+    const [firstName = '', ...lastNameParts] = name.trim().split(' ');
+    const lastName = lastNameParts.join(' ');
 
     return {
-      id: Math.random().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      contactType: 'person',
       name,
       firstName,
       lastName,
-      contactType: 'person',
-      imageAvailable: false,
       phoneNumbers: [
         {
-          id: Math.random().toString(),
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           label: 'mobile',
-          number: phone,
-          digits: phone.replace(/\D/g, ''),
-          countryCode: phone.startsWith('+') ? phone.split(' ')[0] : '+91',
+          number: normalizedPhone,
+          digits,
+          countryCode: normalizedPhone.split(' ')[0] || '+91',
         },
       ],
+      imageAvailable: false,
       addresses: [],
     };
   };
 
+  const processExcelData = async (jsonData: any[], batchSize = 50): Promise<Contacts.Contact[]> => {
+    const contacts: Contacts.Contact[] = [];
+    for (let i = 0; i < jsonData.length; i += batchSize) {
+      const batch = jsonData.slice(i, i + batchSize);
+      const batchContacts = batch
+        .map(row => convertToContact(row))
+        .filter((contact): contact is Contacts.Contact => contact !== null);
+      contacts.push(...batchContacts);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    return contacts;
+  };
+
   const handleFileImport = async () => {
     try {
+      setIsImporting(true);
       const result = await DocumentPicker.getDocumentAsync({
         type: [
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'application/vnd.ms-excel',
           'text/csv',
         ],
-        copyToCacheDirectory: true,
       });
 
-      if (result.canceled) {
-        return;
-      }
+      if (result.canceled) return;
 
-      setIsImporting(true);
       const file = result.assets[0];
       const fileUri = file.uri;
-      const fileType = file.mimeType;
+      const fileType = file.mimeType as string;
 
-      let fileData;
-      if (
-        fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-        fileType === 'application/vnd.ms-excel'
-      ) {
-        // Excel file
-        fileData = await FileSystem.readAsStringAsync(fileUri, {
+      if (!fileType) {
+        throw new Error('File type not found');
+      }
+
+      let jsonData;
+      if (fileType.includes('excel') || fileType.includes('spreadsheetml')) {
+        const fileData = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
         const workbook = XLSX.read(fileData, { type: 'base64' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-        // Convert to contacts format with validation
-        const contacts = jsonData
-          .map(convertToContact)
-          .filter((contact): contact is Contact => contact !== null);
-
-        if (contacts.length === 0) {
-          Alert.alert('Warning', 'No valid contacts found in the file');
-          return;
-        }
-
-        setSelectedContacts(prev => [...prev, ...contacts]);
+        jsonData = XLSX.utils.sheet_to_json(sheet);
       } else if (fileType === 'text/csv') {
-        // CSV file
-        fileData = await FileSystem.readAsStringAsync(fileUri, {
+        const fileData = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.UTF8,
         });
         const workbook = XLSX.read(fileData, { type: 'string' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-        // Convert to contacts format with validation
-        const contacts = jsonData
-          .map(convertToContact)
-          .filter((contact): contact is Contact => contact !== null);
-
-        if (contacts.length === 0) {
-          Alert.alert('Warning', 'No valid contacts found in the file');
-          return;
-        }
-
-        setSelectedContacts(prev => [...prev, ...contacts]);
+        jsonData = XLSX.utils.sheet_to_json(sheet);
+      } else {
+        throw new Error('Unsupported file type');
       }
 
-      // Clean up the temporary file
+      const contacts = await processExcelData(jsonData);
+      if (contacts.length === 0) {
+        Alert.alert('Warning', 'No valid contacts found in the file');
+        return;
+      }
+
+      setSelectedContacts(prev => [...prev, ...contacts]);
       await FileSystem.deleteAsync(fileUri, { idempotent: true });
     } catch (err) {
       console.error('File import error:', err);
-      Alert.alert('Error', 'Failed to import contacts from file. Please check the file format.');
+      Alert.alert('Error', 'Failed to import contacts. Please check the file format.');
     } finally {
       setIsImporting(false);
     }
@@ -181,11 +182,25 @@ export default function CreateGroupModal({
       return;
     }
 
-    // Pass the group data to the parent component
+    if (selectedContacts.length === 0) {
+      Alert.alert('Error', 'At least one contact is required');
+      return;
+    }
+
+    const normalizedContacts = selectedContacts.map(contact => ({
+      ...contact,
+      phoneNumbers: contact?.phoneNumbers?.map(phone => ({
+        ...phone,
+        number: normalizePhoneNumber(phone.number || ''),
+        digits: getDigits(phone.number || ''),
+        countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
+      })),
+    }));
+
     onSave({
       name: groupName,
       description,
-      contacts: selectedContacts,
+      contacts: normalizedContacts,
     });
   };
 
@@ -208,7 +223,10 @@ export default function CreateGroupModal({
             <ContactSelector
               visible={showContactSelector}
               onClose={() => setShowContactSelector(false)}
-              onDone={(contacts: any[]) => setSelectedContacts(contacts)}
+              onDone={(contacts: Contacts.Contact[]) => {
+                setSelectedContacts(contacts);
+                setShowContactSelector(false);
+              }}
               initialSelectedContacts={selectedContacts}
             />
           </View>
