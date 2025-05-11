@@ -1,4 +1,3 @@
-import * as Contacts from 'expo-contacts';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -6,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,17 +17,17 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import XLSX from 'xlsx';
-import ContactSelector from './ContactSelector';
+import ContactSelector, { ExtendedContact } from './ContactSelector';
 
 interface CreateGroupModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (groupData: { name: string; description: string; contacts: Contacts.Contact[] }) => void;
+  onSave: (groupData: { name: string; description: string; contacts: ExtendedContact[] }) => void;
   isEditing?: boolean;
   initialData?: {
     name: string;
     description: string;
-    contacts: Contacts.Contact[];
+    contacts: ExtendedContact[];
   };
 }
 
@@ -40,17 +40,23 @@ export default function CreateGroupModal({
 }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
-  const [selectedContacts, setSelectedContacts] = useState<Contacts.Contact[]>(
+  const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>(
     initialData?.contacts || []
   );
   const [showContactSelector, setShowContactSelector] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importedContacts, setImportedContacts] = useState<ExtendedContact[]>([]);
+  const [showImportedModal, setShowImportedModal] = useState(false);
 
   useEffect(() => {
     if (isEditing && initialData) {
       setGroupName(initialData.name || '');
       setDescription(initialData.description || '');
       setSelectedContacts(initialData.contacts || []);
+      // Separate device and imported contacts
+      setImportedContacts(
+        initialData.contacts?.filter(contact => !contact.isContactFromDevice) || []
+      );
     }
   }, [isEditing, initialData]);
 
@@ -59,6 +65,7 @@ export default function CreateGroupModal({
       setGroupName('');
       setDescription('');
       setSelectedContacts([]);
+      setImportedContacts([]);
     }
   }, [visible, isEditing]);
 
@@ -74,7 +81,7 @@ export default function CreateGroupModal({
     return phone.replace(/\D/g, '');
   };
 
-  const convertToContact = (row: any, defaultCountry = 'IN'): Contacts.Contact | null => {
+  const convertToContact = (row: any, defaultCountry = 'IN'): ExtendedContact | null => {
     if (!row || typeof row !== 'object') return null;
 
     const name = row.name || row.Name || '';
@@ -104,16 +111,17 @@ export default function CreateGroupModal({
       ],
       imageAvailable: false,
       addresses: [],
+      isContactFromDevice: false, // Set to false for Excel-imported contacts
     };
   };
 
-  const processExcelData = async (jsonData: any[], batchSize = 50): Promise<Contacts.Contact[]> => {
-    const contacts: Contacts.Contact[] = [];
+  const processExcelData = async (jsonData: any[], batchSize = 50): Promise<ExtendedContact[]> => {
+    const contacts: ExtendedContact[] = [];
     for (let i = 0; i < jsonData.length; i += batchSize) {
       const batch = jsonData.slice(i, i + batchSize);
       const batchContacts = batch
         .map(row => convertToContact(row))
-        .filter((contact): contact is Contacts.Contact => contact !== null);
+        .filter((contact): contact is ExtendedContact => contact !== null);
       contacts.push(...batchContacts);
       await new Promise(resolve => setTimeout(resolve, 0));
     }
@@ -166,7 +174,8 @@ export default function CreateGroupModal({
         return;
       }
 
-      setSelectedContacts(prev => [...prev, ...contacts]);
+      setImportedContacts(contacts);
+      setSelectedContacts(prev => [...prev.filter(c => c.isContactFromDevice), ...contacts]);
       await FileSystem.deleteAsync(fileUri, { idempotent: true });
     } catch (err) {
       console.error('File import error:', err);
@@ -174,6 +183,11 @@ export default function CreateGroupModal({
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleClearImported = () => {
+    setImportedContacts([]);
+    setSelectedContacts(prev => prev.filter(c => c.isContactFromDevice));
   };
 
   const handleSave = () => {
@@ -207,6 +221,7 @@ export default function CreateGroupModal({
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <SafeAreaView className="flex-1 bg-black/50">
+        {/* Contact Selector Modal */}
         {showContactSelector && (
           <View
             style={{
@@ -223,14 +238,63 @@ export default function CreateGroupModal({
             <ContactSelector
               visible={showContactSelector}
               onClose={() => setShowContactSelector(false)}
-              onDone={(contacts: Contacts.Contact[]) => {
-                setSelectedContacts(contacts);
+              onDone={(contacts: ExtendedContact[]) => {
+                // Ensure device contacts have isContactFromDevice: true
+                const deviceContacts = contacts.map(contact => ({
+                  ...contact,
+                  isContactFromDevice: true,
+                }));
+                setSelectedContacts([...deviceContacts, ...importedContacts]);
                 setShowContactSelector(false);
               }}
-              initialSelectedContacts={selectedContacts}
+              initialSelectedContacts={selectedContacts.filter(c => c.isContactFromDevice)}
             />
           </View>
         )}
+
+        {/* Imported Contacts Modal */}
+        {showImportedModal && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={showImportedModal}
+            onRequestClose={() => setShowImportedModal(false)}
+          >
+            <SafeAreaView className="flex-1 bg-black/50">
+              <View className="bg-white rounded-t-[32px] shadow-2xl flex-1">
+                <View className="p-6">
+                  <View className="flex-row items-center justify-between mb-6">
+                    <Text className="text-2xl font-bold text-gray-900">Imported Contacts</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowImportedModal(false)}
+                      accessibilityLabel="Close imported contacts modal"
+                      className="items-center justify-center w-10 h-10 rounded-full bg-gray-50"
+                    >
+                      <Icon name="close" size={20} color="#64748b" />
+                    </TouchableOpacity>
+                  </View>
+                  {importedContacts.length > 0 ? (
+                    <FlatList
+                      data={importedContacts}
+                      keyExtractor={item => item.id as string}
+                      renderItem={({ item }) => (
+                        <View className="p-3 border-b border-gray-200">
+                          <Text className="text-gray-900">{item.name}</Text>
+                          <Text className="text-gray-500">{item?.phoneNumbers?.[0]?.number}</Text>
+                        </View>
+                      )}
+                      contentContainerStyle={{ paddingBottom: 20 }}
+                    />
+                  ) : (
+                    <Text className="text-center text-gray-500">No imported contacts</Text>
+                  )}
+                </View>
+              </View>
+            </SafeAreaView>
+          </Modal>
+        )}
+
+        {/* Main Create Group Modal */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="justify-end flex-1"
@@ -284,23 +348,30 @@ export default function CreateGroupModal({
                 <View>
                   <Text className="mb-2 font-medium text-gray-700">Add Contacts</Text>
                   <View className="space-y-3">
+                    {/* Device Contacts Selector */}
                     <TouchableOpacity
                       className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
                       onPress={() => setShowContactSelector(true)}
                       accessibilityLabel="Select contacts for group"
                     >
                       <Text
-                        className={selectedContacts.length > 0 ? 'text-gray-900' : 'text-gray-400'}
+                        className={
+                          selectedContacts.filter(c => c.isContactFromDevice).length > 0
+                            ? 'text-gray-900'
+                            : 'text-gray-400'
+                        }
                       >
-                        {selectedContacts.length > 0
-                          ? `${selectedContacts.length} contacts selected`
+                        {selectedContacts.filter(c => c.isContactFromDevice).length > 0
+                          ? `${
+                              selectedContacts.filter(c => c.isContactFromDevice).length
+                            } contacts selected`
                           : 'Select contacts'}
                       </Text>
                       <View className="flex-row items-center">
-                        {selectedContacts.length > 0 && (
+                        {selectedContacts.filter(c => c.isContactFromDevice).length > 0 && (
                           <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                             <Text className="text-sm font-medium text-white">
-                              {selectedContacts.length}
+                              {selectedContacts.filter(c => c.isContactFromDevice).length}
                             </Text>
                           </View>
                         )}
@@ -308,11 +379,20 @@ export default function CreateGroupModal({
                       </View>
                     </TouchableOpacity>
 
+                    {/* Import or Show Imported Contacts */}
                     <TouchableOpacity
-                      className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
-                      onPress={handleFileImport}
+                      className="flex-row items-center mt-4 justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                      onPress={
+                        importedContacts.length > 0
+                          ? () => setShowImportedModal(true)
+                          : handleFileImport
+                      }
                       disabled={isImporting}
-                      accessibilityLabel="Import contacts from file"
+                      accessibilityLabel={
+                        importedContacts.length > 0
+                          ? 'Show imported contacts'
+                          : 'Import contacts from file'
+                      }
                     >
                       <View className="flex-row items-center">
                         <Icon
@@ -322,11 +402,22 @@ export default function CreateGroupModal({
                           style={{ marginRight: 12 }}
                         />
                         <Text className="text-gray-900">
-                          {isImporting ? 'Importing...' : 'Import from Excel/CSV'}
+                          {isImporting
+                            ? 'Importing...'
+                            : importedContacts.length > 0
+                            ? `${importedContacts.length} contacts imported`
+                            : 'Import from Excel/CSV'}
                         </Text>
                       </View>
                       {isImporting ? (
                         <ActivityIndicator size="small" color="#64748b" />
+                      ) : importedContacts.length > 0 ? (
+                        <TouchableOpacity
+                          onPress={handleClearImported}
+                          accessibilityLabel="Clear imported contacts"
+                        >
+                          <Icon name="close" size={16} color="#ef4444" />
+                        </TouchableOpacity>
                       ) : (
                         <Icon name="upload" size={16} color="#64748b" />
                       )}

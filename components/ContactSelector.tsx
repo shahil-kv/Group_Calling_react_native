@@ -1,6 +1,6 @@
 import * as Contacts from 'expo-contacts';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,17 +22,21 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 const MODAL_HEIGHT = Math.floor(Dimensions.get('window').height * 0.85);
 const CONTACTS_PER_PAGE = 40;
 
+export interface ExtendedContact extends Contacts.Contact {
+  isContactFromDevice?: boolean;
+}
+
 interface ContactSelectorProps {
   visible: boolean;
   onClose: () => void;
-  onDone: (selectedContacts: Contacts.Contact[]) => void;
-  initialSelectedContacts?: Contacts.Contact[];
+  onDone: (selectedContacts: ExtendedContact[]) => void;
+  initialSelectedContacts?: ExtendedContact[];
 }
 
 interface ContactItemProps {
-  item: Contacts.Contact;
+  item: ExtendedContact;
   isSelected: boolean;
-  toggleContact: (c: Contacts.Contact) => void;
+  toggleContact: (c: ExtendedContact) => void;
 }
 
 const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps) => {
@@ -80,17 +84,17 @@ export default function ContactSelector({
   onDone,
   initialSelectedContacts = [],
 }: ContactSelectorProps) {
-  const [allContacts, setAllContacts] = useState<Contacts.Contact[]>([]);
-  const [displayedContacts, setDisplayedContacts] = useState<Contacts.Contact[]>([]);
-  const [selectedContacts, setSelectedContacts] = useState<Contacts.Contact[]>([]);
+  const [allContacts, setAllContacts] = useState<ExtendedContact[]>([]);
+  const [displayedContacts, setDisplayedContacts] = useState<ExtendedContact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [fabVisible, setFabVisible] = useState(true);
-  const fabAnim = useState(new Animated.Value(0))[0];
+  const [fabOpacity] = useState(new Animated.Value(1)); // For FAB fade animation
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // Normalize phone numbers
   const normalizePhoneNumber = (phone: string): string => {
@@ -117,8 +121,12 @@ export default function ContactSelector({
             digits: phone.number?.replace(/\D/g, '') || '',
             countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
           })),
+          isContactFromDevice: contact.isContactFromDevice ?? true,
         }))
       );
+
+      // Check if keyboard is already visible when component mounts
+      Keyboard.isVisible() && setIsKeyboardVisible(true);
     }
   }, [visible, initialSelectedContacts]);
 
@@ -160,6 +168,7 @@ export default function ContactSelector({
               digits: phone.number?.replace(/\D/g, '') || '',
               countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
             })),
+            isContactFromDevice: true, // Device contacts
           }))
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -175,9 +184,11 @@ export default function ContactSelector({
     })();
   }, [visible]);
 
-  const filteredContacts = searchQuery
-    ? allContacts.filter(contact => {
-        const q = searchQuery.toLowerCase();
+  // Memoize filtered contacts to prevent unnecessary re-renders
+  const filteredContacts = useMemo(() => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return allContacts.filter(contact => {
         return (
           (contact.name && contact.name.toLowerCase().includes(q)) ||
           (contact.phoneNumbers &&
@@ -185,8 +196,10 @@ export default function ContactSelector({
               p.number?.toLowerCase().includes(q)
             ))
         );
-      })
-    : displayedContacts;
+      });
+    }
+    return displayedContacts;
+  }, [searchQuery, allContacts, displayedContacts]);
 
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore || searchQuery) return;
@@ -201,64 +214,81 @@ export default function ContactSelector({
     }, 300);
   }, [isLoadingMore, hasMore, searchQuery, page, allContacts]);
 
+  // Handle keyboard visibility and FAB animation
   useEffect(() => {
-    let showSub: EmitterSubscription, hideSub: EmitterSubscription;
-    if (Platform.OS === 'ios') {
-      showSub = Keyboard.addListener('keyboardWillShow', e => {
-        setKeyboardHeight(e.endCoordinates.height);
-        setFabVisible(true);
-        Animated.timing(fabAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      });
-      hideSub = Keyboard.addListener('keyboardWillHide', () => {
-        setKeyboardHeight(0);
-        setFabVisible(true);
-        Animated.timing(fabAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      });
-    } else {
-      showSub = Keyboard.addListener('keyboardDidShow', e => {
-        setKeyboardHeight(e.endCoordinates.height);
-        setFabVisible(true);
-        Animated.timing(fabAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      });
-      hideSub = Keyboard.addListener('keyboardDidHide', () => {
-        setKeyboardHeight(0);
-        setFabVisible(true);
-        Animated.timing(fabAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      });
-    }
-    return () => {
-      showSub?.remove();
-      hideSub?.remove();
-    };
-  }, [fabAnim]);
+    if (!visible) return;
 
-  const toggleContact = useCallback((contact: Contacts.Contact) => {
+    // Check if keyboard is already open on mount
+    const checkKeyboard = async () => {
+      const isKeyboardOpen = await Keyboard.isVisible();
+      if (isKeyboardOpen) {
+        setIsKeyboardVisible(true);
+
+        // For iOS, we can get the keyboard height from screen dimensions
+        if (Platform.OS === 'ios') {
+          // Estimate keyboard height (roughly 1/3 of screen height for iOS)
+          const estimatedHeight = Math.floor(Dimensions.get('window').height * 0.33);
+          setKeyboardHeight(estimatedHeight);
+        } else {
+          // For Android, use a reasonable default height
+          setKeyboardHeight(300);
+        }
+      }
+    };
+
+    checkKeyboard();
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener: EmitterSubscription = Keyboard.addListener(showEvent, e => {
+      const height = e.endCoordinates.height;
+      setKeyboardHeight(height);
+      setIsKeyboardVisible(true);
+
+      // Animate FAB opacity in
+      Animated.timing(fabOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideListener: EmitterSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+
+      // Keep FAB visible even when keyboard hides
+      Animated.timing(fabOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, [visible, fabOpacity]);
+
+  const toggleContact = useCallback((contact: ExtendedContact) => {
     setSelectedContacts(prev =>
       prev.some(c => c.id === contact.id)
         ? prev.filter(c => c.id !== contact.id)
-        : [...prev, contact]
+        : [...prev, { ...contact, isContactFromDevice: true }]
     );
   }, []);
 
   const clearSelection = useCallback(() => setSelectedContacts([]), []);
 
-  const selectAll = useCallback(() => setSelectedContacts(filteredContacts), [filteredContacts]);
+  const selectAll = useCallback(() => {
+    const updatedContacts = filteredContacts.map(contact => ({
+      ...contact,
+      isContactFromDevice: true,
+    }));
+    setSelectedContacts(updatedContacts);
+  }, [filteredContacts]);
 
   if (!visible) return null;
 
@@ -363,36 +393,34 @@ export default function ContactSelector({
               }
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={{ paddingBottom: 5, flexGrow: 1 }}
+              contentContainerStyle={{ paddingBottom: 80 }} // Increased padding to ensure FAB doesn't overlap content
               initialNumToRender={20}
               maxToRenderPerBatch={40}
               windowSize={10}
             />
           )}
         </KeyboardAvoidingView>
-        {fabVisible && (
-          <Animated.View
-            className="absolute left-0 right-0 z-50 items-center"
-            style={{
-              bottom: keyboardHeight > 0 ? keyboardHeight + 12 : 24,
-              opacity: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1] }),
+        <Animated.View
+          className="absolute left-0 right-0 z-50 items-center"
+          style={{
+            bottom: keyboardHeight > 0 ? keyboardHeight + 12 : 24,
+            opacity: fabOpacity,
+          }}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity
+            className="min-w-[180px] items-center justify-center py-3.5 rounded-3xl bg-primary shadow-lg"
+            onPress={() => {
+              onDone(selectedContacts);
             }}
-            pointerEvents="box-none"
+            accessibilityLabel="Done selecting contacts"
+            activeOpacity={0.85}
           >
-            <TouchableOpacity
-              className="min-w-[180px] items-center justify-center py-3.5 rounded-3xl bg-primary shadow-lg"
-              onPress={() => {
-                onDone(selectedContacts);
-              }}
-              accessibilityLabel="Done selecting contacts"
-              activeOpacity={0.85}
-            >
-              <Text className="text-base font-semibold text-white">
-                Done • {selectedContacts.length} selected
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+            <Text className="text-base font-semibold text-white">
+              Done • {selectedContacts.length} selected
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
