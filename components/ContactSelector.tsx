@@ -1,6 +1,6 @@
 import * as Contacts from 'expo-contacts';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -85,7 +85,7 @@ export default function ContactSelector({
   initialSelectedContacts = [],
 }: ContactSelectorProps) {
   const [allContacts, setAllContacts] = useState<ExtendedContact[]>([]);
-  const [displayedContacts, setDisplayedContacts] = useState<ExtendedContact[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<ExtendedContact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -93,7 +93,7 @@ export default function ContactSelector({
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [fabOpacity] = useState(new Animated.Value(1)); // For FAB fade animation
+  const [fabOpacity] = useState(new Animated.Value(1));
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // Normalize phone numbers
@@ -107,6 +107,22 @@ export default function ContactSelector({
 
   // Clean contact ID for consistency
   const cleanContactId = (id: string) => id.replace(':ABPerson', '');
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setAllContacts([]);
+      setFilteredContacts([]);
+      setSelectedContacts([]);
+      setSearchQuery('');
+      setIsLoading(false);
+      setPage(1);
+      setHasMore(true);
+      setIsLoadingMore(false);
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+    }
+  }, [visible]);
 
   // Initialize selected contacts when the modal opens
   useEffect(() => {
@@ -139,6 +155,8 @@ export default function ContactSelector({
         const { status } = await Contacts.requestPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert('Permission Denied', 'Please grant access to contacts.');
+          setAllContacts([]);
+          setFilteredContacts([]);
           return;
         }
         const { data } = await Contacts.getContactsAsync({
@@ -173,22 +191,29 @@ export default function ContactSelector({
           .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         setAllContacts(filtered);
-        setDisplayedContacts(filtered.slice(0, CONTACTS_PER_PAGE));
+        setFilteredContacts(filtered.slice(0, CONTACTS_PER_PAGE));
         setPage(1);
         setHasMore(filtered.length > CONTACTS_PER_PAGE);
       } catch (e) {
         Alert.alert('Error', 'Failed to load contacts');
+        setAllContacts([]);
+        setFilteredContacts([]);
       } finally {
         setIsLoading(false);
       }
     })();
   }, [visible]);
 
-  // Memoize filtered contacts to prevent unnecessary re-renders
-  const filteredContacts = useMemo(() => {
+  // Filter contacts based on search query
+  useEffect(() => {
+    if (!allContacts.length) {
+      setFilteredContacts([]);
+      return;
+    }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return allContacts.filter(contact => {
+      const filtered = allContacts.filter(contact => {
         return (
           (contact.name && contact.name.toLowerCase().includes(q)) ||
           (contact.phoneNumbers &&
@@ -197,9 +222,15 @@ export default function ContactSelector({
             ))
         );
       });
+      setFilteredContacts(filtered);
+      setHasMore(false); // Disable pagination while searching
+    } else {
+      // Reset to paginated view when search query is cleared
+      const paginated = allContacts.slice(0, page * CONTACTS_PER_PAGE);
+      setFilteredContacts(paginated);
+      setHasMore(paginated.length < allContacts.length);
     }
-    return displayedContacts;
-  }, [searchQuery, allContacts, displayedContacts]);
+  }, [searchQuery, allContacts, page]);
 
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore || searchQuery) return;
@@ -207,7 +238,7 @@ export default function ContactSelector({
     setTimeout(() => {
       const nextPage = page + 1;
       const nextContacts = allContacts.slice(0, nextPage * CONTACTS_PER_PAGE);
-      setDisplayedContacts(nextContacts);
+      setFilteredContacts(nextContacts);
       setPage(nextPage);
       setHasMore(nextContacts.length < allContacts.length);
       setIsLoadingMore(false);
@@ -218,19 +249,14 @@ export default function ContactSelector({
   useEffect(() => {
     if (!visible) return;
 
-    // Check if keyboard is already open on mount
     const checkKeyboard = async () => {
       const isKeyboardOpen = await Keyboard.isVisible();
       if (isKeyboardOpen) {
         setIsKeyboardVisible(true);
-
-        // For iOS, we can get the keyboard height from screen dimensions
         if (Platform.OS === 'ios') {
-          // Estimate keyboard height (roughly 1/3 of screen height for iOS)
           const estimatedHeight = Math.floor(Dimensions.get('window').height * 0.33);
           setKeyboardHeight(estimatedHeight);
         } else {
-          // For Android, use a reasonable default height
           setKeyboardHeight(300);
         }
       }
@@ -245,8 +271,6 @@ export default function ContactSelector({
       const height = e.endCoordinates.height;
       setKeyboardHeight(height);
       setIsKeyboardVisible(true);
-
-      // Animate FAB opacity in
       Animated.timing(fabOpacity, {
         toValue: 1,
         duration: 200,
@@ -257,8 +281,6 @@ export default function ContactSelector({
     const hideListener: EmitterSubscription = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
       setIsKeyboardVisible(false);
-
-      // Keep FAB visible even when keyboard hides
       Animated.timing(fabOpacity, {
         toValue: 1,
         duration: 200,
@@ -359,6 +381,13 @@ export default function ContactSelector({
               <ActivityIndicator size="large" color="#1E3A8A" />
               <Text className="mt-3 text-sm text-gray-500">Loading contacts...</Text>
             </View>
+          ) : filteredContacts.length === 0 ? (
+            <View className="items-center py-8">
+              <View className="items-center justify-center w-12 h-12 mb-3 bg-gray-100 rounded-full">
+                <Icon name="search" size={20} color="#94a3b8" />
+              </View>
+              <Text className="text-sm text-center text-gray-500">No contacts found</Text>
+            </View>
           ) : (
             <FlatList
               data={filteredContacts}
@@ -383,17 +412,9 @@ export default function ContactSelector({
                   </View>
                 ) : null
               }
-              ListEmptyComponent={
-                <View className="items-center py-8">
-                  <View className="items-center justify-center w-12 h-12 mb-3 bg-gray-100 rounded-full">
-                    <Icon name="search" size={20} color="#94a3b8" />
-                  </View>
-                  <Text className="text-sm text-center text-gray-500">No contacts found</Text>
-                </View>
-              }
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={{ paddingBottom: 80 }} // Increased padding to ensure FAB doesn't overlap content
+              contentContainerStyle={{ paddingBottom: 80 }}
               initialNumToRender={20}
               maxToRenderPerBatch={40}
               windowSize={10}

@@ -2,14 +2,12 @@ import { ExtendedContact } from '@/components/ContactSelector';
 import CreateGroupModal from '@/components/CreateGroupModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
-import { Group } from '@/types/contact.types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
 import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useGroupStore } from '../../stores/groupStore';
 
 // Types
 interface GroupItemProps {
@@ -23,17 +21,20 @@ interface SearchBarProps {
   onChangeText: (text: string) => void;
 }
 
-/**
- * Normalizes phone numbers to international format
- * @param phone Raw phone number
- * @returns Formatted international phone number or original if invalid
- */
+// Define the Group type (since we're not using useGroupStore)
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  contacts: ExtendedContact[];
+  createdAt: string;
+}
+
 const normalizePhoneNumber = (phone: string): string => {
   const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
   return phoneNumber && phoneNumber.isValid() ? phoneNumber.formatInternational() : phone;
 };
 
-// Memoized Components for better performance
 const SearchBar = memo(({ value, onChangeText }: SearchBarProps) => (
   <View className="flex-row items-center flex-1 p-3 bg-white border border-gray-200 rounded-lg">
     <Icon name="search" size={18} color="#64748b" />
@@ -119,106 +120,94 @@ const EmptyState = memo(
   )
 );
 
-/**
- * Main Groups Screen Component
- * Handles listing, creating, editing, and deleting contact groups
- */
 export default function GroupsScreen() {
-  // State management
-  const { groups, addGroup, updateGroup, deleteGroup, setGroups } = useGroupStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
+  const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
+
+  // Define cleanContactId before it's used
+  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
+
+  // Fetch groups using useQuery
+  const {
+    data: fetchedGroups,
+    refetch: fetchGroups,
+    isFetching,
+  } = useGet<any, { userId: string | undefined }>(
+    '/group/get-groups',
+    { userId: stableUserId },
+    {
+      showErrorToast: true,
+      showSuccessToast: false,
+      showLoader: true,
+    }
+  );
+
+  // Transform fetchedGroups directly for rendering
+  const groups = useMemo(() => {
+    if (!fetchedGroups?.data) return [];
+
+    return fetchedGroups.data.map(
+      (group: {
+        id: number;
+        group_name: string;
+        description: string;
+        contacts: Array<{
+          id: number;
+          contact_id: string | null;
+          name: string;
+          first_name: string | null;
+          last_name: string | null;
+          phone_number: string;
+          country_code: string;
+          raw_contact: any;
+          is_contact_from_device: boolean;
+        }>;
+      }) => ({
+        id: group.id.toString(),
+        name: group.group_name,
+        description: group.description,
+        contacts: group.contacts.map(contact => {
+          const rawContact = contact.raw_contact || {};
+          const normalizedPhone = normalizePhoneNumber(contact.phone_number);
+
+          return {
+            id: cleanContactId(contact.contact_id || contact.id.toString()),
+            name: contact.name,
+            firstName: contact.first_name || contact.name.split(' ')[0],
+            lastName: contact.last_name || contact.name.split(' ').slice(1).join(' '),
+            contactType: 'person' as const,
+            imageAvailable: rawContact.imageAvailable || false,
+            phoneNumbers: [
+              {
+                id: contact.id.toString(),
+                label: 'mobile',
+                number: normalizedPhone,
+                digits: normalizedPhone.replace(/\D/g, ''),
+                countryCode: contact.country_code || normalizedPhone.split(' ')[0] || '',
+              },
+            ],
+            addresses: rawContact.addresses || [],
+            isContactFromDevice: contact.is_contact_from_device,
+          };
+        }),
+        createdAt: new Date().toISOString(),
+      })
+    );
+  }, [fetchedGroups]);
 
   // API hooks
   const { mutateAsync: crudGroup } = usePost('/group/manage-group', {
-    invalidateQueriesOnSuccess: ['group'],
+    invalidateQueriesOnSuccess: ['/group/get-groups'],
     showErrorToast: true,
     showSuccessToast: true,
     showLoader: true,
   });
-
-  const { mutateAsync: getGroups } = useGet('/group/get-groups', {
-    invalidateQueriesOnSuccess: ['group'],
-    showErrorToast: true,
-    showSuccessToast: false,
-    showLoader: true,
-  });
-
-  // Helper to clean contact ids by removing unnecessary prefixes
-  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
-
-  /**
-   * Fetches groups from API and transforms them to the required format
-   */
-  const fetchGroups = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      const response = await getGroups({
-        userId: user.id,
-      });
-
-      if (response?.data) {
-        // Transform API response format to app format
-        const transformedGroups = response.data.map(
-          (group: {
-            id: number;
-            group_name: string;
-            description: string;
-            contacts: Array<{
-              id: number;
-              contact_id: string | null;
-              name: string;
-              first_name: string | null;
-              last_name: string | null;
-              phone_number: string;
-              country_code: string;
-              raw_contact: any;
-              is_contact_from_device: boolean;
-            }>;
-          }) => ({
-            id: group.id.toString(),
-            name: group.group_name,
-            description: group.description,
-            contacts: group.contacts.map(contact => {
-              const rawContact = contact.raw_contact || {};
-              const normalizedPhone = normalizePhoneNumber(contact.phone_number);
-
-              return {
-                id: cleanContactId(contact.contact_id || contact.id.toString()),
-                name: contact.name,
-                firstName: contact.first_name || contact.name.split(' ')[0],
-                lastName: contact.last_name || contact.name.split(' ').slice(1).join(' '),
-                contactType: 'person' as const,
-                imageAvailable: rawContact.imageAvailable || false,
-                phoneNumbers: [
-                  {
-                    id: contact.id.toString(),
-                    label: 'mobile',
-                    number: normalizedPhone,
-                    digits: normalizedPhone.replace(/\D/g, ''),
-                    countryCode: contact.country_code || normalizedPhone.split(' ')[0] || '',
-                  },
-                ],
-                addresses: rawContact.addresses || [],
-                isContactFromDevice: contact.is_contact_from_device,
-              };
-            }),
-            createdAt: new Date().toISOString(),
-          })
-        );
-
-        setGroups(transformedGroups);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-      Alert.alert('Error', 'Failed to fetch groups. Please try again.');
-    }
-  }, [user?.id, getGroups, setGroups]);
+  const stableCrudGroup = useCallback((params: any) => crudGroup(params), [crudGroup]);
 
   // Handle pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -227,21 +216,11 @@ export default function GroupsScreen() {
     setIsRefreshing(false);
   }, [fetchGroups]);
 
-  // Fetch groups on component mount or when user changes
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
-
-  /**
-   * Handles adding or updating a group
-   * @param groupData Group data including name, description and contacts
-   */
   const handleAddGroup = useCallback(
     async (groupData: { name: string; description: string; contacts: ExtendedContact[] }) => {
       try {
         if (!user) return;
 
-        // Prepare API payload
         const payload = {
           userId: user.id,
           groupId: isEditing && currentGroupId ? currentGroupId : 0,
@@ -263,16 +242,7 @@ export default function GroupsScreen() {
           opsMode: isEditing && currentGroupId ? 'UPDATE' : 'INSERT',
         };
 
-        // Call API
-        await crudGroup(payload);
-
-        // Update local state
-        if (isEditing && currentGroupId) {
-          updateGroup(currentGroupId, groupData);
-        } else {
-          addGroup(groupData.name, groupData.description, groupData.contacts);
-        }
-
+        await stableCrudGroup(payload);
         setModalVisible(false);
         clearForm();
       } catch (e) {
@@ -280,43 +250,30 @@ export default function GroupsScreen() {
         Alert.alert('Error', 'Failed to save group. Please try again.');
       }
     },
-    [isEditing, currentGroupId, updateGroup, addGroup, user, crudGroup]
+    [isEditing, currentGroupId, user, stableCrudGroup]
   );
 
-  /**
-   * Sets up editing mode for a group
-   * @param groupId ID of group to edit
-   */
-  const handleEditGroup = useCallback(
-    (groupId: string) => {
-      const group = groups.find(g => g.id === groupId);
-      if (!group) return;
+  const handleEditGroup = useCallback((groupId: string) => {
+    setCurrentGroupId(groupId);
+    setIsEditing(true);
+    setModalVisible(true);
+  }, []);
 
-      setCurrentGroupId(groupId);
-      setIsEditing(true);
-      setModalVisible(true);
+  const deleteGroupById = useCallback(
+    async (id: string) => {
+      try {
+        if (!stableUserId) {
+          throw new Error('User ID is not available');
+        }
+        await stableCrudGroup({ groupId: id, opsMode: 'DELETE', userId: stableUserId });
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        Alert.alert('Error', 'Failed to delete group. Please try again.');
+      }
     },
-    [groups]
+    [stableCrudGroup, stableUserId]
   );
 
-  /**
-   * Deletes a group by ID
-   * @param id Group ID to delete
-   */
-  const deleteGroupById = async (id: string) => {
-    try {
-      await crudGroup({ groupId: id, opsMode: 'DELETE', userId: user?.id });
-      deleteGroup(id);
-    } catch (error) {
-      console.error('Error deleting group:', error);
-      Alert.alert('Error', 'Failed to delete group. Please try again.');
-    }
-  };
-
-  /**
-   * Handles delete confirmation for a group
-   * @param id Group ID to delete
-   */
   const handleDeleteGroup = useCallback(
     (id: string) => {
       Alert.alert('Delete Group', 'Are you sure you want to delete this group?', [
@@ -327,46 +284,47 @@ export default function GroupsScreen() {
     [deleteGroupById]
   );
 
-  // Reset form state
   const clearForm = useCallback(() => {
     setCurrentGroupId(null);
     setIsEditing(false);
     setModalVisible(false);
   }, []);
 
-  // Filter groups based on search query
   const filteredGroups = useMemo(() => {
     if (!searchQuery) return groups;
 
     const query = searchQuery.toLowerCase();
     return groups.filter(
-      group =>
+      (group: Group) =>
         group.name.toLowerCase().includes(query) ||
         group.description?.toLowerCase().includes(query) ||
         group.contacts.some(contact => contact.name.toLowerCase().includes(query))
     );
   }, [groups, searchQuery]);
 
-  // Create new group handler
   const handleCreateGroup = useCallback(() => {
     clearForm();
     setTimeout(() => setModalVisible(true), 0);
   }, [clearForm]);
 
+  const renderGroupItem = useCallback(
+    ({ item }: { item: Group }) => (
+      <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
+    ),
+    [handleEditGroup, handleDeleteGroup]
+  );
+
   return (
     <SafeAreaView className="flex-1 px-4 bg-background">
-      {/* Header */}
       <View>
         <Text className="text-2xl font-bold text-dark">Groups</Text>
         <Text className="text-gray-500">Manage your contact groups</Text>
       </View>
 
-      {/* Search bar */}
       <View className="flex-row items-center my-4">
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
       </View>
 
-      {/* Create group button */}
       <View className="mb-4">
         <TouchableOpacity
           onPress={handleCreateGroup}
@@ -378,22 +336,18 @@ export default function GroupsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Groups list or empty state */}
       {filteredGroups.length > 0 ? (
         <FlatList
           data={filteredGroups}
           keyExtractor={item => `group-${item.id}`}
           contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={({ item }) => (
-            <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
-          )}
+          renderItem={renderGroupItem}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         />
       ) : (
         <EmptyState searchQuery={searchQuery} onCreateGroup={handleCreateGroup} />
       )}
 
-      {/* Create/Edit Group Modal */}
       <CreateGroupModal
         visible={modalVisible}
         onClose={() => {
@@ -405,9 +359,9 @@ export default function GroupsScreen() {
         initialData={
           isEditing && currentGroupId
             ? {
-                name: groups.find(g => g.id === currentGroupId)?.name || '',
-                description: groups.find(g => g.id === currentGroupId)?.description || '',
-                contacts: groups.find(g => g.id === currentGroupId)?.contacts || [],
+                name: groups.find((g: Group) => g.id === currentGroupId)?.name || '',
+                description: groups.find((g: Group) => g.id === currentGroupId)?.description || '',
+                contacts: groups.find((g: Group) => g.id === currentGroupId)?.contacts || [],
               }
             : undefined
         }

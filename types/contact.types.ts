@@ -1,4 +1,5 @@
 // Represents a phone number associated with a contact
+import { ExtendedContact } from '@/components/ContactSelector';
 import * as Contacts from 'expo-contacts';
 
 export interface Group {
@@ -15,7 +16,7 @@ export interface GroupStore {
     groups: Group[];
     selectedGroup: Group | null;
     setSelectedGroup: (group: Group | null) => void;
-    addGroup: (name: string, description?: string, contacts?: Contacts.Contact[]) => void;
+    addGroup: (name: string, description?: string, contacts?: ExtendedContact[]) => void;
     updateGroup: (id: string, updates: Partial<Group>) => void;
     deleteGroup: (id: string) => void;
     addContactToGroup: (groupId: string, contact: Contacts.Contact) => void;

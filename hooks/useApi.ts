@@ -6,7 +6,7 @@
 
 import { ApiErrorResponse, MutationConfig } from '@/types/api.types';
 import { handleApiError } from '@/utils/error-handler';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLoader } from '../contexts/LoaderContext';
 import { api } from '../utils/api';
 import { useToast } from './useToast';
@@ -96,29 +96,32 @@ export const usePost = <TData = unknown, TVariables = unknown>(
 
 /**
  * @function useGet
- * @description Hook for making GET requests with built-in error handling and loading states
+ * @description Hook for making GET requests with built-in error handling and loading states using useQuery
  * @template TData - Type of the response data
+ * @template TVariables - Type of the request variables
  * @param {string} endpoint - API endpoint to call
+ * @param {TVariables} [variables] - Query parameters
  * @param {MutationConfig} [config] - Configuration options
- * @returns {UseMutationResult<TData, Error, void>} Mutation result object
+ * @returns {UseQueryResult<TData, Error>} Query result object
  * 
  * @example
- * const { mutate, isLoading } = useGet<ResponseType>('/api/endpoint', {
- *   showSuccessToast: true,
+ * const { data, isLoading, refetch } = useGet<ResponseType, { userId: string }>('/api/endpoint', { userId: '123' }, {
  *   showErrorToast: true,
  *   showLoader: true
  * });
- * 
- * // Use the mutation
- * mutate();
  */
-export const useGet = <TData = any, TVariables = any>(endpoint: string, config?: MutationConfig) => {
+export const useGet = <TData = any, TVariables extends { userId?: string } = any>(
+    endpoint: string,
+    variables?: TVariables,
+    config?: MutationConfig
+) => {
     const toast = useToast();
     const { showLoader, hideLoader } = useLoader();
     const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true } = config || {};
 
-    return useMutation({
-        mutationFn: async (variables?: TVariables) => {
+    return useQuery({
+        queryKey: [endpoint, variables], // Unique key for this query
+        queryFn: async () => {
             try {
                 if (shouldShowLoader) {
                     showLoader();
@@ -140,6 +143,7 @@ export const useGet = <TData = any, TVariables = any>(endpoint: string, config?:
                 }
             }
         },
+        enabled: !!variables?.userId, // Only fetch if userId is truthy
     });
 };
 

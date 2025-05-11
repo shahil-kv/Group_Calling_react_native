@@ -1,4 +1,5 @@
-import { Contact, Group } from '@/types/contact.types';
+import { ExtendedContact } from '@/components/ContactSelector';
+import { Group } from '@/types/contact.types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -15,10 +16,10 @@ type GroupStore = {
   isOffline: boolean;
   offlineChanges: OfflineChange[];
   setSelectedGroup: (group: Group | null) => void;
-  addGroup: (name: string, description?: string, contacts?: Contact[]) => void;
+  addGroup: (name: string, description?: string, contacts?: ExtendedContact[]) => void;
   updateGroup: (id: string, updates: Partial<Group>) => void;
   deleteGroup: (id: string) => void;
-  addContactToGroup: (groupId: string, contact: Contact) => void;
+  addContactToGroup: (groupId: string, contact: ExtendedContact) => void;
   removeContactFromGroup: (groupId: string, contactId: string) => void;
   setGroups: (groups: Group[]) => void;
   setOfflineMode: (isOffline: boolean) => void;
@@ -38,8 +39,13 @@ export const useGroupStore = create<GroupStore>()(
         set({ selectedGroup: group });
       },
 
-      setGroups: (groups) => {
-        set({ groups });
+      setGroups: (newGroups) => {
+        set((state) => {
+          if (JSON.stringify(state.groups) === JSON.stringify(newGroups)) {
+            return state; // Avoid update if groups are unchanged
+          }
+          return { groups: newGroups };
+        });
       },
 
       setOfflineMode: (isOffline) => {
@@ -60,6 +66,7 @@ export const useGroupStore = create<GroupStore>()(
         const newGroup: Group = {
           id: Date.now().toString(),
           name,
+          group_id: "0",
           description,
           contacts,
           createdAt: new Date().toISOString(),
@@ -69,7 +76,6 @@ export const useGroupStore = create<GroupStore>()(
           groups: [...state.groups, newGroup],
         }));
 
-        // Track offline change
         if (get().isOffline) {
           get().addOfflineChange({
             type: 'ADD',
@@ -80,13 +86,16 @@ export const useGroupStore = create<GroupStore>()(
       },
 
       updateGroup: (id, updates) => {
-        set((state) => ({
-          groups: state.groups.map((group) =>
+        set((state) => {
+          const updatedGroups = state.groups.map((group) =>
             group.id === id ? { ...group, ...updates } : group
-          ),
-        }));
+          );
+          if (JSON.stringify(state.groups) === JSON.stringify(updatedGroups)) {
+            return state;
+          }
+          return { groups: updatedGroups };
+        });
 
-        // Track offline change
         if (get().isOffline) {
           get().addOfflineChange({
             type: 'UPDATE',
@@ -97,12 +106,17 @@ export const useGroupStore = create<GroupStore>()(
       },
 
       deleteGroup: (id) => {
-        set((state) => ({
-          groups: state.groups.filter((group) => group.id !== id),
-          selectedGroup: state.selectedGroup?.id === id ? null : state.selectedGroup,
-        }));
+        set((state) => {
+          const updatedGroups = state.groups.filter((group) => group.id !== id);
+          if (JSON.stringify(state.groups) === JSON.stringify(updatedGroups)) {
+            return state;
+          }
+          return {
+            groups: updatedGroups,
+            selectedGroup: state.selectedGroup?.id === id ? null : state.selectedGroup,
+          };
+        });
 
-        // Track offline change
         if (get().isOffline) {
           get().addOfflineChange({
             type: 'DELETE',
@@ -113,8 +127,8 @@ export const useGroupStore = create<GroupStore>()(
       },
 
       addContactToGroup: (groupId, contact) => {
-        set((state) => ({
-          groups: state.groups.map((group) => {
+        set((state) => {
+          const updatedGroups = state.groups.map((group) => {
             if (group.id === groupId) {
               const contactExists = group.contacts.some((c) => c.id === contact.id);
               if (!contactExists) {
@@ -125,18 +139,21 @@ export const useGroupStore = create<GroupStore>()(
               }
             }
             return group;
-          }),
-        }));
+          });
+          if (JSON.stringify(state.groups) === JSON.stringify(updatedGroups)) {
+            return state;
+          }
+          return { groups: updatedGroups };
+        });
 
-        // Track offline change
         if (get().isOffline) {
           get().addOfflineChange({
             type: 'UPDATE',
             data: {
               id: groupId,
               updates: {
-                contacts: [...get().groups.find(g => g.id === groupId)?.contacts || [], contact]
-              }
+                contacts: [...get().groups.find(g => g.id === groupId)?.contacts || [], contact],
+              },
             },
             timestamp: Date.now(),
           });
@@ -144,8 +161,8 @@ export const useGroupStore = create<GroupStore>()(
       },
 
       removeContactFromGroup: (groupId, contactId) => {
-        set((state) => ({
-          groups: state.groups.map((group) => {
+        set((state) => {
+          const updatedGroups = state.groups.map((group) => {
             if (group.id === groupId) {
               return {
                 ...group,
@@ -153,18 +170,24 @@ export const useGroupStore = create<GroupStore>()(
               };
             }
             return group;
-          }),
-        }));
+          });
+          if (JSON.stringify(state.groups) === JSON.stringify(updatedGroups)) {
+            return state;
+          }
+          return { groups: updatedGroups };
+        });
 
-        // Track offline change
         if (get().isOffline) {
           get().addOfflineChange({
             type: 'UPDATE',
             data: {
               id: groupId,
               updates: {
-                contacts: get().groups.find(g => g.id === groupId)?.contacts.filter(c => c.id !== contactId) || []
-              }
+                contacts:
+                  get()
+                    .groups.find(g => g.id === groupId)
+                    ?.contacts.filter(c => c.id !== contactId) || [],
+              },
             },
             timestamp: Date.now(),
           });
