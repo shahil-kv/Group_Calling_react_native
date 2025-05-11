@@ -50,9 +50,8 @@ const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps)
     .slice(0, 2);
   return (
     <TouchableOpacity
-      className={`flex-row items-center justify-between py-2.5 px-3 ${
-        isSelected ? 'bg-primary/5' : 'bg-transparent'
-      }`}
+      className={`flex-row items-center justify-between py-2.5 px-3 ${isSelected ? 'bg-primary/5' : 'bg-transparent'
+        }`}
       onPress={() => toggleContact(item)}
       accessibilityLabel={`Select contact ${displayName}`}
     >
@@ -424,7 +423,7 @@ export default function ContactSelector({
         <Animated.View
           className="absolute left-0 right-0 z-50 items-center"
           style={{
-            bottom: keyboardHeight > 0 ? keyboardHeight + 12 : 24,
+            bottom: keyboardHeight > 0 ? 8 : 24,
             opacity: fabOpacity,
           }}
           pointerEvents="box-none"

@@ -223,33 +223,34 @@ export default function CreateGroupModal({
       <SafeAreaView className="flex-1 bg-black/50">
         {/* Contact Selector Modal */}
         {showContactSelector && (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 100,
-              backgroundColor: 'rgba(0,0,0,0.3)',
-              justifyContent: 'flex-end',
-            }}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={showContactSelector}
+            onRequestClose={() => setShowContactSelector(false)}
           >
-            <ContactSelector
-              visible={showContactSelector}
-              onClose={() => setShowContactSelector(false)}
-              onDone={(contacts: ExtendedContact[]) => {
-                // Ensure device contacts have isContactFromDevice: true
-                const deviceContacts = contacts.map(contact => ({
-                  ...contact,
-                  isContactFromDevice: true,
-                }));
-                setSelectedContacts([...deviceContacts, ...importedContacts]);
-                setShowContactSelector(false);
-              }}
-              initialSelectedContacts={selectedContacts.filter(c => c.isContactFromDevice)}
-            />
-          </View>
+            <SafeAreaView className="flex-1 bg-black/50">
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+                className="justify-end flex-1"
+              >
+                <ContactSelector
+                  visible={showContactSelector}
+                  onClose={() => setShowContactSelector(false)}
+                  onDone={(contacts: ExtendedContact[]) => {
+                    const deviceContacts = contacts.map(contact => ({
+                      ...contact,
+                      isContactFromDevice: true,
+                    }));
+                    setSelectedContacts([...deviceContacts, ...importedContacts]);
+                    setShowContactSelector(false);
+                  }}
+                  initialSelectedContacts={selectedContacts.filter(c => c.isContactFromDevice)}
+                />
+              </KeyboardAvoidingView>
+            </SafeAreaView>
+          </Modal>
         )}
 
         {/* Imported Contacts Modal */}
@@ -332,7 +333,7 @@ export default function CreateGroupModal({
                 </View>
 
                 <View>
-                  <Text className="mb-2 font-medium text-gray-700">Description (Optional)</Text>
+                  <Text className="my-2 font-medium text-gray-700">Description (Optional)</Text>
                   <TextInput
                     className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-base"
                     placeholder="Enter description"
@@ -346,7 +347,7 @@ export default function CreateGroupModal({
                 </View>
 
                 <View>
-                  <Text className="mb-2 font-medium text-gray-700">Add Contacts</Text>
+                  <Text className="my-2 font-medium text-gray-700">Add Contacts</Text>
                   <View className="space-y-3">
                     {/* Device Contacts Selector */}
                     <TouchableOpacity
@@ -362,9 +363,8 @@ export default function CreateGroupModal({
                         }
                       >
                         {selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                          ? `${
-                              selectedContacts.filter(c => c.isContactFromDevice).length
-                            } contacts selected`
+                          ? `${selectedContacts.filter(c => c.isContactFromDevice).length
+                          } contacts selected`
                           : 'Select contacts'}
                       </Text>
                       <View className="flex-row items-center">
@@ -405,8 +405,8 @@ export default function CreateGroupModal({
                           {isImporting
                             ? 'Importing...'
                             : importedContacts.length > 0
-                            ? `${importedContacts.length} contacts imported`
-                            : 'Import from Excel/CSV'}
+                              ? `${importedContacts.length} contacts imported`
+                              : 'Import from Excel/CSV'}
                         </Text>
                       </View>
                       {isImporting ? (
@@ -416,10 +416,10 @@ export default function CreateGroupModal({
                           onPress={handleClearImported}
                           accessibilityLabel="Clear imported contacts"
                         >
-                          <Icon name="close" size={16} color="#ef4444" />
+                          <Icon name="trash" size={22} color="#ef4444" />
                         </TouchableOpacity>
                       ) : (
-                        <Icon name="upload" size={16} color="#64748b" />
+                        <Icon name="upload" size={22} color="#64748b" />
                       )}
                     </TouchableOpacity>
                   </View>

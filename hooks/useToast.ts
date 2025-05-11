@@ -12,6 +12,7 @@ export const useToast = () => {
             visibilityTime: 3000,
             autoHide: true,
             topOffset: 50,
+            swipeable: true,
         });
     };
 

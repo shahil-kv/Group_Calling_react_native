@@ -59,38 +59,37 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
     className="p-4 mb-3 bg-white rounded-lg shadow-sm"
     accessibilityLabel={`View group ${group.name}`}
   >
-    <View className="flex-row justify-between">
+    <View className="flex-row items-center justify-between py-2">
       <View className="flex-row items-center">
-        <View className="items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-          <Icon name="user" size={20} color="#1E3A8A" />
+        <View className="items-center justify-center w-12 h-12 rounded-full bg-primary/10">
+          <Icon name="users" size={24} color="#1E3A8A" />
         </View>
-        <View className="flex-1 ml-3">
-          <Text className="font-medium text-dark">{group.name}</Text>
-          <Text className="text-gray-500">{group.contacts.length} contacts</Text>
-        </View>
+      </View>
+      <View className="flex-1 ml-4">
+        <Text className="text-base font-medium text-dark">{group.name}</Text>
+        <Text className="text-sm text-gray-500">{group.contacts.length} contacts</Text>
       </View>
       <View className="flex-row items-center">
         <TouchableOpacity
-          className="p-2 mr-2"
-          onPress={e => {
+          className="p-3 rounded-full"
+          onPress={(e) => {
             e.stopPropagation();
             onEdit(group.id);
           }}
           accessibilityLabel={`Edit group ${group.name}`}
         >
-          <Icon name="users" size={18} color="#64748b" />
+          <Icon name="edit" size={22} color="#1E3A8A" />
         </TouchableOpacity>
         <TouchableOpacity
-          className="p-2 mr-2"
-          onPress={e => {
+          className="p-3 rounded-full"
+          onPress={(e) => {
             e.stopPropagation();
             onDelete(group.id);
           }}
           accessibilityLabel={`Delete group ${group.name}`}
         >
-          <Icon name="trash" size={18} color="#ef4444" />
+          <Icon name="trash" size={24} color="#EF4444" />
         </TouchableOpacity>
-        <Icon name="arrow-right" size={18} color="#64748b" />
       </View>
     </View>
     {group.description ? (
@@ -229,7 +228,7 @@ export default function GroupsScreen() {
           contacts: groupData.contacts.map(contact => ({
             ...contact,
             id: cleanContactId(
-              contact.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+              contact.id || `${Date.now()} -${Math.random().toString(36).slice(2)}`
             ),
             phoneNumbers: contact?.phoneNumbers?.map(phone => ({
               ...phone,
@@ -315,6 +314,7 @@ export default function GroupsScreen() {
   );
 
   return (
+
     <SafeAreaView className="flex-1 px-4 bg-background">
       <View>
         <Text className="text-2xl font-bold text-dark">Groups</Text>
@@ -359,10 +359,10 @@ export default function GroupsScreen() {
         initialData={
           isEditing && currentGroupId
             ? {
-                name: groups.find((g: Group) => g.id === currentGroupId)?.name || '',
-                description: groups.find((g: Group) => g.id === currentGroupId)?.description || '',
-                contacts: groups.find((g: Group) => g.id === currentGroupId)?.contacts || [],
-              }
+              name: groups.find((g: Group) => g.id === currentGroupId)?.name || '',
+              description: groups.find((g: Group) => g.id === currentGroupId)?.description || '',
+              contacts: groups.find((g: Group) => g.id === currentGroupId)?.contacts || [],
+            }
             : undefined
         }
       />
