@@ -30,7 +30,7 @@ A modern React Native application built with Expo, TypeScript, and NativeWind.
 
 ```bash
 git clone [repository-url]
-cd testing_shahil
+cd mass_caller
 ```
 
 2. Install dependencies:
