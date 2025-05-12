@@ -1,10 +1,30 @@
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { Keyboard } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-// import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
-  //   const { user } = useAuth();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   return (
     <Tabs
@@ -15,6 +35,7 @@ export default function TabLayout() {
           height: 60,
           paddingBottom: 10,
           paddingTop: 5,
+          display: keyboardVisible ? 'none' : 'flex', // Hide tab bar when keyboard is visible
         },
         tabBarLabelStyle: {
           fontSize: 12,
