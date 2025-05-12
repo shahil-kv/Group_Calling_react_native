@@ -128,9 +128,6 @@ export default function GroupsScreen() {
   const { user } = useAuth();
   const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
 
-  // Define cleanContactId before it's used
-  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
-
   // Fetch groups using useQuery
   const {
     data: fetchedGroups,
@@ -145,6 +142,17 @@ export default function GroupsScreen() {
       showLoader: false,
     }
   );
+
+  // API hooks
+  const { mutateAsync: crudGroup } = usePost('/group/manage-group', {
+    invalidateQueriesOnSuccess: ['/group/get-groups'],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: true,
+  });
+
+  // Define cleanContactId before it's used
+  const cleanContactId = (id: string) => id.replace(':ABPerson', '');
 
   // Transform fetchedGroups directly for rendering
   const groups = useMemo(() => {
@@ -199,13 +207,6 @@ export default function GroupsScreen() {
     );
   }, [fetchedGroups]);
 
-  // API hooks
-  const { mutateAsync: crudGroup } = usePost('/group/manage-group', {
-    invalidateQueriesOnSuccess: ['/group/get-groups'],
-    showErrorToast: true,
-    showSuccessToast: true,
-    showLoader: true,
-  });
   const stableCrudGroup = useCallback((params: any) => crudGroup(params), [crudGroup]);
 
   // Handle pull-to-refresh
