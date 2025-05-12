@@ -10,16 +10,15 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import XLSX from 'xlsx';
 import ContactSelector from './ContactSelector';
-
 interface CreateGroupModalProps {
   visible: boolean;
   onClose: () => void;
@@ -221,7 +220,7 @@ export default function CreateGroupModal({
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <SafeAreaView className="flex-1 h-full bg-black/50">
+      <SafeAreaView className="flex-1 h-full bg-black/50" edges={['top', 'left', 'right']}>
         {/* Contact Selector Modal */}
         {showContactSelector && (
           <Modal
@@ -230,7 +229,7 @@ export default function CreateGroupModal({
             visible={showContactSelector}
             onRequestClose={() => setShowContactSelector(false)}
           >
-            <SafeAreaView className="flex-1 ">
+            <SafeAreaView className="flex-1 " edges={['top', 'left', 'right']}>
               <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'height' : 'height'}
                 keyboardVerticalOffset={0}
@@ -262,7 +261,7 @@ export default function CreateGroupModal({
             visible={showImportedModal}
             onRequestClose={() => setShowImportedModal(false)}
           >
-            <SafeAreaView className="flex-1 bg-black/50">
+            <SafeAreaView className="flex-1  h-full bg-black/50" edges={['top', 'left', 'right']}>
               <View className="bg-white rounded-t-[32px] shadow-2xl flex-1">
                 <View className="p-6">
                   <View className="flex-row items-center justify-between mb-6">

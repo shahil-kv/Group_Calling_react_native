@@ -11,13 +11,13 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const MODAL_HEIGHT = Math.floor(Dimensions.get('window').height * 0.85);
@@ -299,8 +299,8 @@ export default function ContactSelector({
   if (!visible) return null;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 rounded-t-[30px] bg-white overflow-hidden">
+    <SafeAreaView className="flex-1 " edges={['top', 'left', 'right']}>
+      <View className="flex-1 bg-white rounded-t-[30px] overflow-hidden ">
         <View className="p-4 border-b border-gray-100">
           <View className="flex-row items-center justify-between mb-3">
             <View>
@@ -319,7 +319,7 @@ export default function ContactSelector({
             <View className="flex-row items-center flex-1 px-3 py-2 bg-gray-50 rounded-2xl">
               <Icon name="search" size={14} color="#64748b" />
               <TextInput
-                className="flex-1 px-2 text-sm"
+                className="flex-1 px-2 py-3 text-sm"
                 placeholder="Search contacts..."
                 placeholderTextColor="#94a3b8"
                 value={searchQuery}
