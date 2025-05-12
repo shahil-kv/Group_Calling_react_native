@@ -1,6 +1,6 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { Tabs } from 'expo-router';
+import React from 'react';
+import Icon from 'react-native-vector-icons/FontAwesome';
 // import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
@@ -9,8 +9,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#1E3A8A",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: '#1E3A8A',
+        tabBarInactiveTintColor: '#64748b',
         tabBarStyle: {
           height: 60,
           paddingBottom: 10,
@@ -18,7 +18,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: "InterMedium",
+          fontFamily: 'InterMedium',
         },
         headerShown: false,
       }}
@@ -26,10 +26,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "home",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="home" size={size} color={color} />
-          ),
+          title: 'home',
+          tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
         }}
       />
       {/* <Tabs.Screen
@@ -44,28 +42,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="groups"
         options={{
-          title: "Groups",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="users" size={size} color={color} />
-          ),
+          title: 'Groups',
+          tabBarIcon: ({ color, size }) => <Icon name="users" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calling"
         options={{
-          title: "Call",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="phone" size={size} color={color} />
-          ),
+          title: 'Call',
+          tabBarIcon: ({ color, size }) => <Icon name="phone" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="gear" size={size} color={color} />
-          ),
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Icon name="gear" size={size} color={color} />,
         }}
       />
     </Tabs>

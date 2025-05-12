@@ -221,7 +221,7 @@ export default function CreateGroupModal({
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <SafeAreaView className="flex-1 bg-black/50">
+      <SafeAreaView className="flex-1 h-full bg-black/50">
         {/* Contact Selector Modal */}
         {showContactSelector && (
           <Modal
@@ -230,11 +230,11 @@ export default function CreateGroupModal({
             visible={showContactSelector}
             onRequestClose={() => setShowContactSelector(false)}
           >
-            <SafeAreaView className="flex-1 bg-black/50">
+            <SafeAreaView className="flex-1 ">
               <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-                className="justify-end flex-1"
+                behavior={Platform.OS === 'ios' ? 'height' : 'height'}
+                keyboardVerticalOffset={0}
+                className="justify-end flex-1 "
               >
                 <ContactSelector
                   visible={showContactSelector}
