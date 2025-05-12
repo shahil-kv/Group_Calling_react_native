@@ -1,3 +1,4 @@
+import { ExtendedContact } from '@/types/contact.types';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -17,7 +18,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import XLSX from 'xlsx';
-import ContactSelector, { ExtendedContact } from './ContactSelector';
+import ContactSelector from './ContactSelector';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -363,8 +364,9 @@ export default function CreateGroupModal({
                         }
                       >
                         {selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                          ? `${selectedContacts.filter(c => c.isContactFromDevice).length
-                          } contacts selected`
+                          ? `${
+                              selectedContacts.filter(c => c.isContactFromDevice).length
+                            } contacts selected`
                           : 'Select contacts'}
                       </Text>
                       <View className="flex-row items-center">
@@ -405,8 +407,8 @@ export default function CreateGroupModal({
                           {isImporting
                             ? 'Importing...'
                             : importedContacts.length > 0
-                              ? `${importedContacts.length} contacts imported`
-                              : 'Import from Excel/CSV'}
+                            ? `${importedContacts.length} contacts imported`
+                            : 'Import from Excel/CSV'}
                         </Text>
                       </View>
                       {isImporting ? (

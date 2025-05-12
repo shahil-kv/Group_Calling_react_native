@@ -1,34 +1,14 @@
-import { ExtendedContact } from '@/components/ContactSelector';
 import CreateGroupModal from '@/components/CreateGroupModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
+import { ExtendedContact } from '@/types/contact.types';
+import { Group, GroupItemProps, GroupModelReGroup, SearchBarProps } from '@/types/group.types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
 import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-
-// Types
-interface GroupItemProps {
-  group: Group;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-}
-
-interface SearchBarProps {
-  value: string;
-  onChangeText: (text: string) => void;
-}
-
-// Define the Group type (since we're not using useGroupStore)
-interface Group {
-  id: string;
-  name: string;
-  description: string;
-  contacts: ExtendedContact[];
-  createdAt: string;
-}
 
 const normalizePhoneNumber = (phone: string): string => {
   const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
@@ -157,54 +137,35 @@ export default function GroupsScreen() {
   // Transform fetchedGroups directly for rendering
   const groups = useMemo(() => {
     if (!fetchedGroups?.data) return [];
-
-    return fetchedGroups.data.map(
-      (group: {
-        id: number;
-        group_name: string;
-        description: string;
-        contacts: Array<{
-          id: number;
-          contact_id: string | null;
-          name: string;
-          first_name: string | null;
-          last_name: string | null;
-          phone_number: string;
-          country_code: string;
-          raw_contact: any;
-          is_contact_from_device: boolean;
-        }>;
-      }) => ({
-        id: group.id.toString(),
-        name: group.group_name,
-        description: group.description,
-        contacts: group.contacts.map(contact => {
-          const rawContact = contact.raw_contact || {};
-          const normalizedPhone = normalizePhoneNumber(contact.phone_number);
-
-          return {
-            id: cleanContactId(contact.contact_id || contact.id.toString()),
-            name: contact.name,
-            firstName: contact.first_name || contact.name.split(' ')[0],
-            lastName: contact.last_name || contact.name.split(' ').slice(1).join(' '),
-            contactType: 'person' as const,
-            imageAvailable: rawContact.imageAvailable || false,
-            phoneNumbers: [
-              {
-                id: contact.id.toString(),
-                label: 'mobile',
-                number: normalizedPhone,
-                digits: normalizedPhone.replace(/\D/g, ''),
-                countryCode: contact.country_code || normalizedPhone.split(' ')[0] || '',
-              },
-            ],
-            addresses: rawContact.addresses || [],
-            isContactFromDevice: contact.is_contact_from_device,
-          };
-        }),
-        createdAt: new Date().toISOString(),
-      })
-    );
+    return fetchedGroups.data.map((group: GroupModelReGroup) => ({
+      id: group.id.toString(),
+      name: group.group_name,
+      description: group.description,
+      contacts: group.contacts.map(contact => {
+        const rawContact = contact.raw_contact || {};
+        const normalizedPhone = normalizePhoneNumber(contact.phone_number);
+        return {
+          id: cleanContactId(contact.contact_id || contact.id.toString()),
+          name: contact.name,
+          firstName: contact.first_name || contact.name.split(' ')[0],
+          lastName: contact.last_name || contact.name.split(' ').slice(1).join(' '),
+          contactType: 'person' as const,
+          imageAvailable: rawContact.imageAvailable || false,
+          phoneNumbers: [
+            {
+              id: contact.id.toString(),
+              label: 'mobile',
+              number: normalizedPhone,
+              digits: normalizedPhone.replace(/\D/g, ''),
+              countryCode: contact.country_code || normalizedPhone.split(' ')[0] || '',
+            },
+          ],
+          addresses: rawContact.addresses || [],
+          isContactFromDevice: contact.is_contact_from_device,
+        };
+      }),
+      createdAt: new Date().toISOString(),
+    }));
   }, [fetchedGroups]);
 
   const stableCrudGroup = useCallback((params: any) => crudGroup(params), [crudGroup]);

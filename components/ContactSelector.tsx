@@ -1,3 +1,4 @@
+import { ContactItemProps, ContactSelectorProps, ExtendedContact } from '@/types/contact.types';
 import * as Contacts from 'expo-contacts';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import React, { memo, useCallback, useEffect, useState } from 'react';
@@ -22,23 +23,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 const MODAL_HEIGHT = Math.floor(Dimensions.get('window').height * 0.85);
 const CONTACTS_PER_PAGE = 40;
 
-export interface ExtendedContact extends Contacts.Contact {
-  isContactFromDevice?: boolean;
-}
-
-interface ContactSelectorProps {
-  visible: boolean;
-  onClose: () => void;
-  onDone: (selectedContacts: ExtendedContact[]) => void;
-  initialSelectedContacts?: ExtendedContact[];
-}
-
-interface ContactItemProps {
-  item: ExtendedContact;
-  isSelected: boolean;
-  toggleContact: (c: ExtendedContact) => void;
-}
-
 const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps) => {
   const displayName = item.name || 'Unknown Contact';
   const phoneNumber = item.phoneNumbers?.[0]?.number || 'No number';
@@ -50,8 +34,9 @@ const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps)
     .slice(0, 2);
   return (
     <TouchableOpacity
-      className={`flex-row items-center justify-between py-2.5 px-3 ${isSelected ? 'bg-primary/5' : 'bg-transparent'
-        }`}
+      className={`flex-row items-center justify-between py-2.5 px-3 ${
+        isSelected ? 'bg-primary/5' : 'bg-transparent'
+      }`}
       onPress={() => toggleContact(item)}
       accessibilityLabel={`Select contact ${displayName}`}
     >
