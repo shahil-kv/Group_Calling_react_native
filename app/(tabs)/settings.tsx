@@ -69,7 +69,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="default" backgroundColor="#ffffff" />
       <ScrollView className="flex-1">
         <View className="flex-1 px-4">
           <Header title="Settings" subtitle="Manage your account and preferences" />

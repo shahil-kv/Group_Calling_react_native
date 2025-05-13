@@ -30,7 +30,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return (
         <ThemeContext.Provider value={{ theme, setTheme }}>
             <View
-                className={`flex-1 bg-background ${theme === 'dark' ? 'dark' : ''}`}
+                className={`flex-1 bg-background-primary ${theme === 'dark' ? 'dark' : ''}`}
             >
                 {children}
             </View>

@@ -43,7 +43,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background-primary">
       <ScrollView>
         <Header title="Welcome back" subtitle="Alex" showBell={true} />
 

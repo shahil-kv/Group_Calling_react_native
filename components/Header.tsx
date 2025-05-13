@@ -18,7 +18,7 @@ const Header = ({ title, subtitle, showBell = false }: HeaderProps) => {
       </View>
 
       {showBell && (
-        <TouchableOpacity className="items-center justify-center w-10 h-10 rounded-full shadow-sm bg-background">
+        <TouchableOpacity className="items-center justify-center w-10 h-10 rounded-full shadow-sm bg-background-primary">
           <Icon name="bell" size={20} color="#64748b" />
         </TouchableOpacity>
       )}

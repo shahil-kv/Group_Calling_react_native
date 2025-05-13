@@ -178,7 +178,7 @@ export default function SignupScreen() {
 
   if (!isStorageReady) {
     return (
-      <View className="items-center justify-center flex-1 bg-background">
+      <View className="items-center justify-center flex-1 bg-background-primary">
         <Text className="text-lg text-gray-600">Initializing app...</Text>
       </View>
     );
@@ -187,7 +187,7 @@ export default function SignupScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background"
+      className="flex-1 bg-background-primary"
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View className="justify-center flex-1 px-6 py-12">

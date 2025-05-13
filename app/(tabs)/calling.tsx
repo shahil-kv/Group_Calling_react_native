@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CallStatus, useCallStore } from '@/stores/callStore';
 import { useContactStore } from '@/stores/contactStore';
 import { useGroupStore } from '@/stores/groupStore';
-import { Contact } from '@/types/contact.types';
 import * as Contacts from 'expo-contacts';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -14,10 +13,9 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StatusBar,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -27,7 +25,7 @@ type ExpoContact = Contacts.Contact;
 interface Group {
   id: string;
   name: string;
-  contacts: Contact[];
+  contacts: Contacts.Contact[];
 }
 
 // Mock implementation - would be replaced with actual calling libraries
@@ -68,178 +66,6 @@ export default function CallingScreen() {
   const requestCallPermissions = async (): Promise<boolean> => {
     return true; // For non-Android platforms
   };
-
-  // const requestCallPermissions = async () => {
-  //   if (Platform.OS === 'android') {
-  //     try {
-  //       console.log('Starting permission request process...');
-
-  //       // First check if we already have the permissions
-  //       const hasCallPermission = await PermissionsAndroid.check(
-  //         PermissionsAndroid.PERMISSIONS.CALL_PHONE
-  //       );
-  //       const hasRecordPermission = await PermissionsAndroid.check(
-  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-  //       );
-
-  //       console.log('Initial permission check:', {
-  //         hasCallPermission,
-  //         hasRecordPermission
-  //       });
-
-  //       // If we already have both permissions, return true
-  //       if (hasCallPermission && hasRecordPermission) {
-  //         console.log('All permissions already granted');
-  //         return true;
-  //       }
-
-  //       // Show specific alert based on which permissions are missing
-  //       if (!hasCallPermission || !hasRecordPermission) {
-  //         const missingPermissions: string[] = [];
-  //         if (!hasCallPermission) missingPermissions.push('Call');
-  //         if (!hasRecordPermission) missingPermissions.push('Recording');
-
-  //         const showPartialPermissionAlert = () => {
-  //           return new Promise<boolean>((resolve) => {
-  //             console.log(missingPermissions);
-
-  //             Alert.alert(
-  //               'Additional Permissions Required',
-  //               `This app needs ${missingPermissions.join(' and ')} permission${missingPermissions.length > 1 ? 's' : ''} to work properly. Would you like to grant ${missingPermissions.length > 1 ? 'them' : 'it'} now?`,
-  //               [
-  //                 {
-  //                   text: 'Not Now',
-  //                   style: 'cancel',
-  //                   onPress: () => {
-  //                     console.log('User declined to grant permissions');
-  //                     resolve(false);
-  //                   }
-  //                 },
-  //                 {
-  //                   text: 'Grant Permission' + (missingPermissions.length > 1 ? 's' : ''),
-  //                   onPress: async () => {
-  //                     try {
-  //                       // Request only the missing permissions
-  //                       const permissionsToRequest: (typeof PermissionsAndroid.PERMISSIONS.CALL_PHONE)[] = [];
-  //                       if (!hasCallPermission) {
-  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
-  //                       }
-  //                       if (!hasRecordPermission) {
-  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
-  //                       }
-
-  //                       console.log('Requesting permissions:', permissionsToRequest);
-
-  //                       // Request permissions one by one to ensure proper handling
-  //                       for (const permission of permissionsToRequest) {
-  //                         console.log(`Requesting permission: ${permission}`);
-  //                         const result = await PermissionsAndroid.request(permission);
-  //                         console.log('result', result);
-
-  //                         console.log(`Permission result for ${permission}:`, result);
-
-  //                         if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-  //                           console.log(`Permission denied for ${permission}`);
-  //                           Alert.alert(
-  //                             'Permission Required',
-  //                             `Please grant ${permission === PermissionsAndroid.PERMISSIONS.CALL_PHONE ? 'Call' : 'Recording'} permission to continue.`,
-  //                             [
-  //                               {
-  //                                 text: 'Open Settings',
-  //                                 onPress: () => {
-  //                                   if (Platform.OS === 'android') {
-  //                                     Linking.openSettings();
-  //                                   }
-  //                                   resolve(false);
-  //                                 }
-  //                               },
-  //                               {
-  //                                 text: 'Cancel',
-  //                                 style: 'cancel',
-  //                                 onPress: () => resolve(false)
-  //                               }
-  //                             ]
-  //                           );
-  //                           return;
-  //                         }
-  //                       }
-
-  //                       // Verify all permissions were granted
-  //                       const verifyCallPermission = await PermissionsAndroid.check(
-  //                         PermissionsAndroid.PERMISSIONS.CALL_PHONE
-  //                       );
-  //                       const verifyRecordPermission = await PermissionsAndroid.check(
-  //                         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-  //                       );
-
-  //                       console.log('Final permission verification:', {
-  //                         verifyCallPermission,
-  //                         verifyRecordPermission
-  //                       });
-
-  //                       if (verifyCallPermission && verifyRecordPermission) {
-  //                         console.log('All permissions successfully granted');
-  //                         resolve(true);
-  //                       } else {
-  //                         console.log('Permission verification failed');
-  //                         Alert.alert(
-  //                           'Permission Error',
-  //                           'Failed to verify permissions. Please try again or check your device settings.',
-  //                           [
-  //                             {
-  //                               text: 'Try Again',
-  //                               onPress: () => resolve(false)
-  //                             },
-  //                             {
-  //                               text: 'Cancel',
-  //                               style: 'cancel',
-  //                               onPress: () => resolve(false)
-  //                             }
-  //                           ]
-  //                         );
-  //                       }
-  //                     } catch (error) {
-  //                       console.error('Error in permission request:', error);
-  //                       Alert.alert(
-  //                         'Permission Error',
-  //                         'There was an error requesting permissions. Please try again.',
-  //                         [
-  //                           {
-  //                             text: 'Try Again',
-  //                             onPress: () => resolve(false)
-  //                           },
-  //                           {
-  //                             text: 'Cancel',
-  //                             style: 'cancel',
-  //                             onPress: () => resolve(false)
-  //                           }
-  //                         ]
-  //                       );
-  //                     }
-  //                   }
-  //                 }
-  //               ]
-  //             );
-  //           });
-  //         };
-
-  //         const permissionGranted = await showPartialPermissionAlert();
-  //         console.log('Permission request final result:', permissionGranted);
-  //         return permissionGranted;
-  //       }
-
-  //       return false;
-  //     } catch (err) {
-  //       console.error('Error in permission handling:', err);
-  //       Alert.alert(
-  //         'Permission Error',
-  //         'There was an error handling permissions. Please try again or check your device settings.'
-  //       );
-  //       return false;
-  //     }
-  //   }
-  //   return true; // For non-Android platforms
-  // };
 
   const confirmSequentialCalls = () => {
     return new Promise(resolve => {
@@ -326,8 +152,7 @@ export default function CallingScreen() {
       if (validContacts.length < selectedContacts.length) {
         Alert.alert(
           'Some Contacts Skipped',
-          `${
-            selectedContacts.length - validContacts.length
+          `${selectedContacts.length - validContacts.length
           } contacts were skipped because they don't have valid phone numbers.`
         );
       }
@@ -484,22 +309,21 @@ export default function CallingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         {/* Header Section */}
         <View className="px-5 pt-6 pb-4">
           <View className="flex-row items-center mb-1">
             <Icon name="phone" size={24} color="#1E3A8A" />
-            <Text className="ml-2 text-2xl font-bold text-dark">Start a Call</Text>
+            <Text className="ml-2 text-2xl font-bold text-text-primary">Start a Call</Text>
           </View>
-          <Text className="ml-10 text-gray-500">Call your contacts sequentially</Text>
+          <Text className="text-text-secondary ">Call your contacts sequentially</Text>
         </View>
 
         <ScrollView className="flex-1">
           {/* Tutorial Section */}
           {showTutorial && (
-            <View className="p-4 mx-4 mb-6 rounded-lg bg-primary/10">
+            <View className="p-4 mx-4 mb-6 rounded-xl bg-tertiary">
               <View className="flex-row items-center mb-3">
                 <Icon name="info-circle" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-primary">How it works</Text>
@@ -509,35 +333,35 @@ export default function CallingScreen() {
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">1</Text>
                   </View>
-                  <Text className="text-gray-700">Select contacts or a group</Text>
+                  <Text className="text-text-secondary">Select contacts or a group</Text>
                 </View>
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">2</Text>
                   </View>
-                  <Text className="text-gray-700">Record a message (Premium)</Text>
+                  <Text className="text-text-secondary">Record a message (Premium)</Text>
                 </View>
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">3</Text>
                   </View>
-                  <Text className="text-gray-700">Start calling</Text>
+                  <Text className="text-text-secondary">Start calling</Text>
                 </View>
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">4</Text>
                   </View>
-                  <Text className="text-gray-700">App will automatically call each contact</Text>
+                  <Text className="text-text-secondary">App will automatically call each contact</Text>
                 </View>
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">5</Text>
                   </View>
-                  <Text className="text-gray-700">Stop anytime with "End Call Session"</Text>
+                  <Text className="text-text-secondary">Stop anytime with "End Call Session"</Text>
                 </View>
               </View>
               <TouchableOpacity className="self-end mt-4" onPress={() => setShowTutorial(false)}>
-                <Text className="font-medium text-primary">Got it</Text>
+                <Text className="font-medium text-secondary">Got it</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -545,19 +369,18 @@ export default function CallingScreen() {
           {/* Main Content */}
           <View className="gap-4 px-4 space-y-4">
             {/* Group Selection */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
               <View className="flex-row items-center mb-3">
                 <Icon name="users" size={20} color="#1E3A8A" />
-                <Text className="ml-2 text-lg font-bold text-dark">Select Group</Text>
+                <Text className="ml-2 text-lg font-bold text-text-primary">Select Group</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${
-                    selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
-                  }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-primary'
+                    }`}
                   onPress={() => handleGroupSelect(null)}
                 >
-                  <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
+                  <Text className={selectedGroup === null ? 'text-white' : 'text-text-secondary'}>
                     Custom
                   </Text>
                 </TouchableOpacity>
@@ -565,12 +388,11 @@ export default function CallingScreen() {
                 {groups.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${
-                      selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
-                    }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-background-primary'
+                      }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
-                    <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
+                    <Text className={selectedGroup === group.id ? 'text-white' : 'text-text-secondary'}>
                       {group.name}
                     </Text>
                   </TouchableOpacity>
@@ -579,11 +401,11 @@ export default function CallingScreen() {
             </View>
 
             {/* Contact Selection */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center">
                   <Icon name="address-book" size={20} color="#1E3A8A" />
-                  <Text className="ml-2 text-lg font-bold text-dark">Selected Contacts</Text>
+                  <Text className="ml-2 text-lg font-bold text-text-primary">Selected Contacts</Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsSelectingContacts(true)}>
                   <Text className="font-medium text-secondary">
@@ -594,34 +416,34 @@ export default function CallingScreen() {
 
               {selectedContacts.length > 0 ? (
                 <View>
-                  <Text className="mb-3 text-gray-500">
+                  <Text className="mb-3 text-text-secondary">
                     {selectedContacts.length} contacts selected
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {selectedContacts.slice(0, 5).map((contact: ExpoContact) => (
                       <View key={contact.id} className="items-center mr-4">
-                        <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-primary/10">
+                        <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-primary">
                           <Icon name="user" size={24} color="#1E3A8A" />
                         </View>
-                        <Text className="text-xs text-dark" numberOfLines={1}>
+                        <Text className="text-xs text-text-secondary" numberOfLines={1}>
                           {contact.name}
                         </Text>
                       </View>
                     ))}
                     {selectedContacts.length > 5 && (
                       <View className="items-center">
-                        <View className="items-center justify-center w-12 h-12 mb-1 bg-gray-100 rounded-full">
+                        <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-tertiary">
                           <Text className="font-bold">+{selectedContacts.length - 5}</Text>
                         </View>
-                        <Text className="text-xs text-dark">More</Text>
+                        <Text className="text-xs text-text-secondary">More</Text>
                       </View>
                     )}
                   </ScrollView>
                 </View>
               ) : (
-                <View className="items-center p-4 rounded-lg bg-gray-50">
+                <View className="items-center p-4 rounded-lg ">
                   <Icon name="user-plus" size={32} color="#94A3B8" />
-                  <Text className="mt-2 text-center text-gray-500">
+                  <Text className="mt-2 text-center text-text-primary">
                     No contacts selected. Select a group or add contacts individually.
                   </Text>
                   <TouchableOpacity
@@ -635,34 +457,33 @@ export default function CallingScreen() {
             </View>
 
             {/* Voice Message */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
               <View className="flex-row items-center mb-3">
                 <Icon name="microphone" size={20} color="#1E3A8A" />
-                <Text className="ml-2 text-lg font-bold text-dark">Voice Message</Text>
+                <Text className="ml-2 text-lg font-bold text-text-primary">Voice Message</Text>
                 {!user?.is_premium && (
                   <View className="px-2 py-1 ml-2 rounded bg-secondary/10">
-                    <Text className="text-xs text-secondary">Premium</Text>
+                    <Text className="text-sm font-semi-bold text-secondary">Premium</Text>
                   </View>
                 )}
               </View>
 
               <TouchableOpacity
-                className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
-                  isRecording ? 'bg-error/10' : ''
-                } ${!user?.is_premium ? 'opacity-50' : ''}`}
+                className={`bg-background-secondary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
+                  } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
               >
                 <View className="flex-1">
-                  <Text className={`${isRecording ? 'text-error' : 'text-gray-700'} font-medium`}>
+                  <Text className={`${isRecording ? 'text-error' : 'text-text-secondary'} font-medium`}>
                     {isRecording
                       ? 'Recording...'
                       : recordedMessage
-                      ? 'Re-record Message'
-                      : 'Record Voice Message'}
+                        ? 'Re-record Message'
+                        : 'Record Voice Message'}
                   </Text>
                   {!user?.is_premium && (
-                    <Text className="mt-1 text-sm text-gray-500">
+                    <Text className="mt-1 text-sm text-text-tertiary">
                       Upgrade to Pro to record voice messages
                     </Text>
                   )}
@@ -671,17 +492,16 @@ export default function CallingScreen() {
               </TouchableOpacity>
 
               {recordedMessage && (
-                <View className="p-3 mt-4 rounded-lg bg-gray-50">
-                  <Text className="text-gray-700">{recordedMessage}</Text>
+                <View className="p-3 mt-4 rounded-lg bg-tertiary">
+                  <Text className="text-text-secondary">{recordedMessage}</Text>
                 </View>
               )}
             </View>
 
             {/* Start Calling Button */}
             <TouchableOpacity
-              className={`bg-primary rounded-lg py-2 items-center my-2 ${
-                selectedContacts.length === 0 ? 'opacity-50' : ''
-              }`}
+              className={`bg-primary rounded-lg py-2 items-center my-2 ${selectedContacts.length === 0 ? 'opacity-50' : ''
+                }`}
               onPress={handleStartCall}
               disabled={selectedContacts.length === 0}
             >

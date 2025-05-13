@@ -315,7 +315,7 @@ export default function GroupsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 px-4 bg-background">
+    <SafeAreaView className="flex-1 px-4 bg-background-primary">
       <View>
         <Text className="text-2xl font-bold bg-white dark:bg-orange-600 text-dark">Groups</Text>
         <Text className="text-gray-500">Manage your contact groups</Text>

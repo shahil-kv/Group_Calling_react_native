@@ -24,7 +24,10 @@ module.exports = {
         // Neutral: Complementary gray scale
         neutral: "var(--color-neutral)",
         // Background: Updated to subtle cool gray for contrast with vibrant elements
-        background: "var(--color-background)",
+        background: {
+          primary: "var(--color-background-primary)",
+          secondary: "var(--color-background-secondary)",
+        },
         // Surface: Card and content backgrounds
         surface: "var(--color-surface)",
         // Text colors
@@ -55,7 +58,7 @@ module.exports = {
       },
       backgroundImage: {
         'primary-gradient': 'linear-gradient(to right, var(--color-primary), var(--color-secondary))',
-        'header-gradient': 'linear-gradient(to bottom, var(--color-background), var(--color-surface))',
+        'header-gradient': 'linear-gradient(to bottom, var(--color-background-primary), var(--color-surface))',
         'accent-gradient': 'linear-gradient(to right, var(--color-accent), var(--color-success))',
         'status-card-gradient': 'linear-gradient(45deg, var(--statuscard-primary-1), var(--statuscard-primary-2), var(--statuscard-primary-3), var(--statuscard-primary-4))',
         'button-gradient': 'linear-gradient(to right, var(--statuscard-primary-1), var(--statuscard-primary-3))',
@@ -75,14 +78,15 @@ module.exports = {
           // Core theme colors aligned with StatusCard gradients
           '--color-primary': '#4F46E5',          // Indigo 600 - from StatusCard primary
           '--color-secondary': '#8B5CF6',        // Violet 500 - from StatusCard primary
-          '--color-tertiary': '#F5F7FA',         // Light cool gray for contrast
+          '--color-tertiary': '#e3e3e3',
           '--color-accent': '#EC4899',           // Pink 500 - from StatusCard primary
           '--color-success': '#22C55E',          // Green 500 - from StatusCard success
           '--color-warning': '#F59E0B',          // Amber 500 - from StatusCard warning
           '--color-error': '#EF4444',            // Red 500 - from StatusCard error
           '--color-info': '#3B82F6',             // Blue 500 - from StatusCard primary/info
           '--color-neutral': '#64748B',          // Slate 500
-          '--color-background': '#F1F5F9',       // Slate 100
+          '--color-background-primary': '#fafafa',       // Slate 100
+          '--color-background-secondary': '#E0E8F0', // Slate 200
           '--color-surface': '#FFFFFF',          // White
           '--color-text': '#0F172A',             // Slate 900
           '--color-text-secondary': '#475569',   // Slate 600
@@ -122,7 +126,8 @@ module.exports = {
           '--color-error': '#F87171',            // Red 400
           '--color-info': '#60A5FA',             // Blue 400
           '--color-neutral': '#94A3B8',          // Slate 400
-          '--color-background': '#0F172A',       // Slate 900
+          '--color-background-primary': '#0F172A',       // Slate 900
+          '--color-background-secondary': '#6b7280', // Gray 500
           '--color-surface': '#1E293B',          // Slate 800
           '--color-text': '#F8FAFC',             // Slate 50
           '--color-text-secondary': '#CBD5E1',   // Slate 300
