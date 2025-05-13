@@ -13,12 +13,12 @@ const Header = ({ title, subtitle, showBell = false }: HeaderProps) => {
   return (
     <View className="flex-row items-center justify-between px-5 pb-4 pt-14">
       <View>
-        <Text className="text-2xl font-bold text-dark">{title}</Text>
-        {subtitle && <Text className="text-gray-500">{subtitle}</Text>}
+        <Text className="text-2xl font-bold text-text-primary">{title}</Text>
+        {subtitle && <Text className="text-text-secondary">{subtitle}</Text>}
       </View>
 
       {showBell && (
-        <TouchableOpacity className="items-center justify-center w-10 h-10 bg-white rounded-full shadow-sm">
+        <TouchableOpacity className="items-center justify-center w-10 h-10 rounded-full shadow-sm bg-background">
           <Icon name="bell" size={20} color="#64748b" />
         </TouchableOpacity>
       )}

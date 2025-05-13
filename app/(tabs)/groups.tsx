@@ -317,7 +317,7 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView className="flex-1 px-4 bg-background">
       <View>
-        <Text className="text-2xl font-bold text-dark">Groups</Text>
+        <Text className="text-2xl font-bold bg-white dark:bg-orange-600 text-dark">Groups</Text>
         <Text className="text-gray-500">Manage your contact groups</Text>
       </View>
 
@@ -359,10 +359,10 @@ export default function GroupsScreen() {
         initialData={
           isEditing && currentGroupId
             ? {
-                name: groups.find((g: Group) => g.id === currentGroupId)?.name || '',
-                description: groups.find((g: Group) => g.id === currentGroupId)?.description || '',
-                contacts: groups.find((g: Group) => g.id === currentGroupId)?.contacts || [],
-              }
+              name: groups.find((g: Group) => g.id === currentGroupId)?.name || '',
+              description: groups.find((g: Group) => g.id === currentGroupId)?.description || '',
+              contacts: groups.find((g: Group) => g.id === currentGroupId)?.contacts || [],
+            }
             : undefined
         }
       />

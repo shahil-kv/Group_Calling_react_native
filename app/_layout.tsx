@@ -1,3 +1,4 @@
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +22,17 @@ declare global {
 // Create a client
 const queryClient = new QueryClient();
 
+// Component to handle StatusBar styling
+const StatusBarWithTheme = () => {
+  const { theme } = useTheme();
+  return (
+    <StatusBar
+      style={theme === 'dark' ? 'light' : 'dark'}
+      backgroundColor={theme === 'dark' ? '#1E1E1E' : '#F8FAFC'} // Matches tailwind.config.js
+    />
+  );
+};
+
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
@@ -29,20 +41,20 @@ const initializeStorage = async () => {
   try {
     // Clear any existing test data
     await AsyncStorage.removeItem('test');
-    
+
     // Test write
     await AsyncStorage.setItem('test', 'test');
-    
+
     // Test read
     const value = await AsyncStorage.getItem('test');
-    
+
     // Test remove
     await AsyncStorage.removeItem('test');
-    
+
     if (value !== 'test') {
       throw new Error('Storage verification failed');
     }
-    
+
     return true;
   } catch (error) {
     console.error('AsyncStorage initialization failed:', error);
@@ -67,7 +79,7 @@ export default function RootLayout() {
     const initStorageWithRetry = async (retryCount = 0) => {
       const maxRetries = 3;
       const success = await initializeStorage();
-      
+
       if (success) {
         setIsStorageReady(true);
       } else if (retryCount < maxRetries) {
@@ -80,7 +92,7 @@ export default function RootLayout() {
         Toast.show({
           type: 'error',
           text1: 'Storage Error',
-          text2: Platform.OS === 'android' 
+          text2: Platform.OS === 'android'
             ? 'Please clear app data and restart the app'
             : 'Failed to initialize app storage. Please restart the app.',
         });
@@ -118,20 +130,22 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <LoaderProvider>
-          <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-            <Toast />
-          </AuthProvider>
-        </LoaderProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <QueryClientProvider client={queryClient}>
+          <LoaderProvider>
+            <AuthProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBarWithTheme />
+              <Toast />
+            </AuthProvider>
+          </LoaderProvider>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }

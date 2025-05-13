@@ -1,41 +1,29 @@
-import { Tabs } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Keyboard } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+// app/(tabs)/_layout.tsx
+import { Tabs } from 'expo-router';
+import React from 'react';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const { theme } = useTheme();
 
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => {
-        setKeyboardVisible(true);
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardVisible(false);
-      }
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
+  // Define theme-specific colors
+  const activeTintColor = theme === 'dark' ? '#5bd1e7' : '#1E3A8A'; // primary
+  const inactiveTintColor = theme === 'dark' ? '#4B5563' : '#64748B'; // neutral
+  const tabBarBackground = theme === 'dark' ? '#1E1E1E' : '#F8FAFC'; // background
+  const tabBarBorderTopColor = theme === 'dark' ? '#4B5563' : '#E2E8F0'; // borderTopColor
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#1E3A8A",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: activeTintColor,
+        tabBarInactiveTintColor: inactiveTintColor,
         tabBarStyle: {
           height: 60,
           paddingBottom: 10,
           paddingTop: 5,
-          display: keyboardVisible ? 'none' : 'flex', // Hide tab bar when keyboard is visible
+          backgroundColor: tabBarBackground,
+          borderTopColor: tabBarBorderTopColor
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -47,21 +35,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "home",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="home" size={size} color={color} />
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="contacts"
-        options={{
-          title: "Contacts",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="users" size={size} color={color} />
-          ),
-        }}
-      /> */}
       <Tabs.Screen
         name="groups"
         options={{

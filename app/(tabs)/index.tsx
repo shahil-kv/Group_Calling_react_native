@@ -43,7 +43,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-background">
       <ScrollView>
         <Header title="Welcome back" subtitle="Alex" showBell={true} />
 
@@ -63,7 +63,7 @@ export default function HomeScreen() {
 
         {/* Quick actions */}
         <View className="mx-5 mb-6">
-          <Text className="mb-3 text-lg font-bold text-dark">Quick Actions</Text>
+          <Text className="mb-3 text-lg font-bold text-text-primary">Quick Actions</Text>
           <View className="flex-row gap-4">
             <QuickAction
               iconName="users"
@@ -86,7 +86,7 @@ export default function HomeScreen() {
         {/* Recent groups */}
         <View className="mx-5 mb-6">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-dark">Your Groups</Text>
+            <Text className="text-lg font-bold text-text-primary">Your Groups</Text>
             <TouchableOpacity onPress={() => router.push('/groups')}>
               <Text className="text-secondary">See All</Text>
             </TouchableOpacity>
@@ -96,8 +96,8 @@ export default function HomeScreen() {
             groups.slice(0, 3).map((group: any) => (
               <TouchableOpacity
                 key={group.id}
-                className="flex-row items-center justify-between p-4 mb-3 bg-white shadow-sm rounded-xl"
-                // onPress={() => router.push(`/groups/${group.id}`)}
+                className="flex-row items-center justify-between p-4 mb-3 shadow-sm bg-tertiary rounded-xl"
+              // onPress={() => router.push(`/groups/${group.id}`)}
               >
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-10 h-10 rounded-full bg-primary/10">
@@ -105,15 +105,15 @@ export default function HomeScreen() {
                   </View>
                   <View className="ml-3">
                     <Text className="font-medium text-dark">{group.name}</Text>
-                    <Text className="text-sm text-gray-500">{group.contacts.length} contacts</Text>
+                    <Text className="text-sm text-text-secondary">"{group.contacts.length} contacts</Text>
                   </View>
                 </View>
                 <Icon name="arrow-right" size={18} color="#64748b" />
               </TouchableOpacity>
             ))
           ) : (
-            <View className="items-center justify-center p-6 bg-white shadow-sm rounded-xl">
-              <Text className="text-center text-gray-500">
+            <View className="items-center justify-center p-6 shadow-sm bg-tertiary rounded-xl">
+              <Text className="text-center text-text-secondary">
                 You don't have any groups yet. Create your first group to get started.
               </Text>
               <TouchableOpacity
@@ -129,7 +129,7 @@ export default function HomeScreen() {
         {/* Recent calls */}
         <View className="mx-5 mb-8">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-dark">Recent Calls</Text>
+            <Text className="text-lg font-bold text-text-primary">Recent Calls</Text>
           </View>
 
           {recentCalls.length > 0 ? (
@@ -143,8 +143,8 @@ export default function HomeScreen() {
               />
             ))
           ) : (
-            <View className="items-center justify-center p-6 bg-white shadow-sm rounded-xl">
-              <Text className="text-center text-gray-500">
+            <View className="items-center justify-center p-6 shadow-sm bg-tertiary rounded-xl">
+              <Text className="text-center text-text-secondary">
                 You haven't made any calls yet. Start a call to reach your contacts.
               </Text>
               <TouchableOpacity

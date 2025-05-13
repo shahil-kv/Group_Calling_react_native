@@ -12,12 +12,12 @@ interface StatusCardProps {
 
 const StatusCard = ({ title, actionLabel, onAction, status, className }: StatusCardProps) => {
   return (
-    <View className={`p-5 mx-5 bg-primary rounded-xl ${className || ''}`}>
+    <View className={`p-5 mx-5 bg-primary rounded-lg ${className || ''}`}>
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-white">{title}</Text>
         {actionLabel && onAction && (
-          <TouchableOpacity className="px-3 py-1 bg-white rounded-full" onPress={onAction}>
-            <Text className="text-xs font-bold text-primary">{actionLabel}</Text>
+          <TouchableOpacity className="px-3 py-1 rounded-full bg-background" onPress={onAction}>
+            <Text className="text-xs font-bold text-text-primary">{actionLabel}</Text>
           </TouchableOpacity>
         )}
       </View>

@@ -14,19 +14,19 @@ const CallHistoryItem = ({ title, timeAgo, contactsReached, status }: CallHistor
     switch (status) {
       case 'completed':
         return (
-          <View className="px-2 py-1 bg-green-500 rounded-full">
+          <View className="px-2 py-1 rounded-full bg-success">
             <Text className="text-xs font-medium text-white">Completed</Text>
           </View>
         );
       case 'failed':
         return (
-          <View className="px-2 py-1 bg-red-500 rounded-full">
+          <View className="px-2 py-1 rounded-full bg-error">
             <Text className="text-xs font-medium text-white">Failed</Text>
           </View>
         );
       case 'in-progress':
         return (
-          <View className="px-2 py-1 bg-blue-500 rounded-full">
+          <View className="px-2 py-1 rounded-full bg-info">
             <Text className="text-xs font-medium text-white">In Progress</Text>
           </View>
         );
@@ -34,13 +34,13 @@ const CallHistoryItem = ({ title, timeAgo, contactsReached, status }: CallHistor
   };
 
   return (
-    <View className="p-4 mb-3 bg-white shadow-sm rounded-xl">
+    <View className="p-4 mb-3 shadow-sm bg-tertiary rounded-xl">
       <View className="flex-row items-center justify-between">
-        <Text className="font-medium text-gray-900">{title}</Text>
-        <Text className="text-xs text-gray-500">{timeAgo}</Text>
+        <Text className="font-medium text-text-primary">{title}</Text>
+        <Text className="text-xs text-text-secondary">{timeAgo}</Text>
       </View>
-      <View className="flex-row justify-between items-center mt-2">
-        <Text className="text-sm text-gray-600">{contactsReached}</Text>
+      <View className="flex-row items-center justify-between mt-2">
+        <Text className="text-sm text-text-secondary">{contactsReached}</Text>
         {getStatusBadge()}
       </View>
     </View>

@@ -20,7 +20,7 @@ const QuickAction = ({
 }: QuickActionProps) => {
   return (
     <TouchableOpacity
-      className="items-center flex-1 p-4 bg-white shadow-sm rounded-xl"
+      className="items-center flex-1 p-4 shadow-sm bg-tertiary rounded-xl"
       onPress={onPress}
     >
       <View
@@ -28,7 +28,7 @@ const QuickAction = ({
       >
         <Icon name={iconName} size={24} color={iconColor} />
       </View>
-      <Text className="font-medium text-dark">{label}</Text>
+      <Text className="font-medium text-text-primary">{label}</Text>
     </TouchableOpacity>
   );
 };
