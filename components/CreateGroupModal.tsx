@@ -1,24 +1,24 @@
 import { ExtendedContact } from '@/types/contact.types';
+import * as Contacts from 'expo-contacts';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Modal from 'react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import XLSX from 'xlsx';
-import ContactSelector from './ContactSelector';
+
 interface CreateGroupModalProps {
   visible: boolean;
   onClose: () => void;
@@ -30,6 +30,8 @@ interface CreateGroupModalProps {
     contacts: ExtendedContact[];
   };
 }
+
+const CONTACTS_PER_PAGE = 20;
 
 export default function CreateGroupModal({
   visible,
@@ -43,87 +45,209 @@ export default function CreateGroupModal({
   const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>(
     initialData?.contacts || []
   );
-  const [showContactSelector, setShowContactSelector] = useState(false);
+  const [showContactSelection, setShowContactSelection] = useState(false);
+  const [allContacts, setAllContacts] = useState<ExtendedContact[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<ExtendedContact[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [importedContacts, setImportedContacts] = useState<ExtendedContact[]>([]);
-  const [showImportedModal, setShowImportedModal] = useState(false);
 
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (visible) {
+      if (!isEditing) {
+        setGroupName('');
+        setDescription('');
+        setSelectedContacts([]);
+        setImportedContacts([]);
+      }
+      setShowContactSelection(false);
+      setSearchQuery('');
+      setPage(1);
+      setHasMore(true);
+    }
+  }, [visible, isEditing]);
+
+  // Set initial data for editing
   useEffect(() => {
     if (isEditing && initialData) {
       setGroupName(initialData.name || '');
       setDescription(initialData.description || '');
       setSelectedContacts(initialData.contacts || []);
-      // Separate device and imported contacts
       setImportedContacts(
         initialData.contacts?.filter(contact => !contact.isContactFromDevice) || []
       );
     }
   }, [isEditing, initialData]);
 
-  useEffect(() => {
-    if (visible && !isEditing) {
-      setGroupName('');
-      setDescription('');
-      setSelectedContacts([]);
-      setImportedContacts([]);
-    }
-  }, [visible, isEditing]);
-
-  const normalizePhoneNumber = (phone: string): string => {
+  const normalizePhoneNumber = useCallback((phone: string): string => {
     const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
-    if (phoneNumber && phoneNumber.isValid()) {
-      return phoneNumber.formatInternational();
+    return phoneNumber && phoneNumber.isValid() ? phoneNumber.formatInternational() : phone;
+  }, []);
+
+  const cleanContactId = useCallback((id: string) => {
+    return typeof id === 'string'
+      ? id.replace(':ABPerson', '')
+      : `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }, []);
+
+  const fetchContacts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Please grant access to contacts.');
+        setAllContacts([]);
+        setFilteredContacts([]);
+        return;
+      }
+
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.ID, Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
+        pageSize: Platform.OS === 'ios' ? 500 : 1000,
+      });
+
+      console.log('Fetched contacts:', data.length);
+
+      const batchSize = Platform.OS === 'ios' ? 50 : 100;
+      const processedContacts: ExtendedContact[] = [];
+
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = data.slice(i, i + batchSize);
+        const filteredBatch = batch
+          .filter(
+            c => (c.name && c.name.trim() !== '') || (c.phoneNumbers && c.phoneNumbers.length > 0)
+          )
+          .map(contact => ({
+            ...contact,
+            id: cleanContactId(
+              contact.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+            ),
+            phoneNumbers: contact?.phoneNumbers?.map(phone => ({
+              ...phone,
+              number: normalizePhoneNumber(phone.number || ''),
+              digits: phone.number?.replace(/\D/g, '') || '',
+              countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
+            })),
+            isContactFromDevice: true,
+          }));
+        processedContacts.push(...filteredBatch);
+        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 10 : 0));
+      }
+
+      processedContacts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      console.log('Processed contacts:', processedContacts.length);
+
+      setAllContacts(processedContacts);
+      setFilteredContacts(processedContacts.slice(0, CONTACTS_PER_PAGE));
+      setPage(1);
+      setHasMore(processedContacts.length > CONTACTS_PER_PAGE);
+    } catch (e) {
+      console.error('Error fetching contacts:', e);
+      Alert.alert('Error', 'Failed to load contacts');
+      setAllContacts([]);
+      setFilteredContacts([]);
+    } finally {
+      setIsLoading(false);
     }
-    return phone;
-  };
+  }, [cleanContactId, normalizePhoneNumber]);
 
-  const getDigits = (phone: string): string => {
-    return phone.replace(/\D/g, '');
-  };
+  useEffect(() => {
+    if (visible && showContactSelection) {
+      fetchContacts();
+    }
+  }, [visible, showContactSelection, fetchContacts]);
 
-  const convertToContact = (row: any, defaultCountry = 'IN'): ExtendedContact | null => {
-    if (!row || typeof row !== 'object') return null;
+  const computedFilteredContacts = useMemo(() => {
+    if (!allContacts.length) return [];
 
-    const name = row.name || row.Name || '';
-    const phone = row.phone || row.Phone || row.phoneNumber || row.PhoneNumber || '';
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      let results = allContacts.filter(
+        contact =>
+          (contact.name && contact.name.toLowerCase().includes(q)) ||
+          (contact.phoneNumbers &&
+            contact.phoneNumbers.some((p: Contacts.PhoneNumber) =>
+              p.number?.toLowerCase().includes(q)
+            ))
+      );
+      if (Platform.OS === 'ios' && results.length > 100) {
+        results = results.slice(0, 100);
+      }
+      return results;
+    }
+    return allContacts.slice(0, page * CONTACTS_PER_PAGE);
+  }, [allContacts, searchQuery, page]);
 
-    if (!name || !phone) return null;
+  useEffect(() => {
+    setFilteredContacts(computedFilteredContacts);
+    setHasMore(!searchQuery && computedFilteredContacts.length < allContacts.length);
+  }, [computedFilteredContacts, allContacts.length, searchQuery]);
 
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const digits = getDigits(normalizedPhone);
-    const [firstName = '', ...lastNameParts] = name.trim().split(' ');
-    const lastName = lastNameParts.join(' ');
+  const loadMore = useCallback(() => {
+    if (!hasMore || searchQuery) return;
+    setPage(prev => prev + 1);
+  }, [hasMore, searchQuery]);
 
-    return {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      contactType: 'person',
-      name,
-      firstName,
-      lastName,
-      phoneNumbers: [
-        {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          label: 'mobile',
-          number: normalizedPhone,
-          digits,
-          countryCode: normalizedPhone.split(' ')[0] || '+91',
-        },
-      ],
-      imageAvailable: false,
-      addresses: [],
-      isContactFromDevice: false, // Set to false for Excel-imported contacts
-    };
-  };
+  const toggleContact = useCallback((contact: ExtendedContact) => {
+    setSelectedContacts(prev => {
+      const exists = prev.some(c => c.id === contact.id);
+      if (exists) {
+        return prev.filter(c => c.id !== contact.id);
+      }
+      return [...prev, { ...contact, isContactFromDevice: true }];
+    });
+  }, []);
 
-  const processExcelData = async (jsonData: any[], batchSize = 50): Promise<ExtendedContact[]> => {
+  const convertToContact = useCallback(
+    (row: any): ExtendedContact | null => {
+      if (!row || typeof row !== 'object') return null;
+
+      const name = row.name || row.Name || '';
+      const phone = row.phone || row.Phone || row.phoneNumber || row.PhoneNumber || '';
+      if (!name || !phone) return null;
+
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const digits = normalizedPhone.replace(/\D/g, '');
+      const [firstName = '', ...lastNameParts] = name.trim().split(' ');
+      const lastName = lastNameParts.join(' ');
+
+      return {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        contactType: 'person',
+        name,
+        firstName,
+        lastName,
+        phoneNumbers: [
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            label: 'mobile',
+            number: normalizedPhone,
+            digits,
+            countryCode: normalizedPhone.split(' ')[0] || '+91',
+          },
+        ],
+        imageAvailable: false,
+        addresses: [],
+        isContactFromDevice: false,
+      };
+    },
+    [normalizePhoneNumber]
+  );
+
+  const processExcelData = async (jsonData: any[]): Promise<ExtendedContact[]> => {
     const contacts: ExtendedContact[] = [];
+    const batchSize = Platform.OS === 'ios' ? 20 : 50;
     for (let i = 0; i < jsonData.length; i += batchSize) {
       const batch = jsonData.slice(i, i + batchSize);
       const batchContacts = batch
         .map(row => convertToContact(row))
         .filter((contact): contact is ExtendedContact => contact !== null);
       contacts.push(...batchContacts);
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 10 : 0));
     }
     return contacts;
   };
@@ -137,6 +261,7 @@ export default function CreateGroupModal({
           'application/vnd.ms-excel',
           'text/csv',
         ],
+        copyToCacheDirectory: true,
       });
 
       if (result.canceled) return;
@@ -145,9 +270,7 @@ export default function CreateGroupModal({
       const fileUri = file.uri;
       const fileType = file.mimeType as string;
 
-      if (!fileType) {
-        throw new Error('File type not found');
-      }
+      if (!fileType) throw new Error('File type not found');
 
       let jsonData;
       if (fileType.includes('excel') || fileType.includes('spreadsheetml')) {
@@ -185,17 +308,16 @@ export default function CreateGroupModal({
     }
   };
 
-  const handleClearImported = () => {
+  const handleClearImported = useCallback(() => {
     setImportedContacts([]);
     setSelectedContacts(prev => prev.filter(c => c.isContactFromDevice));
-  };
+  }, []);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!groupName.trim()) {
       Alert.alert('Error', 'Group name is required');
       return;
     }
-
     if (selectedContacts.length === 0) {
       Alert.alert('Error', 'At least one contact is required');
       return;
@@ -206,194 +328,198 @@ export default function CreateGroupModal({
       phoneNumbers: contact?.phoneNumbers?.map(phone => ({
         ...phone,
         number: normalizePhoneNumber(phone.number || ''),
-        digits: getDigits(phone.number || ''),
+        digits: phone.number?.replace(/\D/g, '') || '',
         countryCode: phone.number?.startsWith('+') ? phone.number.split(' ')[0] : '+91',
       })),
     }));
 
-    onSave({
-      name: groupName,
-      description,
-      contacts: normalizedContacts,
-    });
+    onSave({ name: groupName, description, contacts: normalizedContacts });
+  }, [groupName, description, selectedContacts, onSave, normalizePhoneNumber]);
+
+  const renderContactItem = ({ item }: { item: ExtendedContact }) => {
+    const isSelected = selectedContacts.some(c => c.id === item.id);
+    const displayName = item.name || 'Unknown Contact';
+    const phoneNumber = item.phoneNumbers?.[0]?.number || 'No number';
+    const initials = displayName
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+    return (
+      <TouchableOpacity
+        className={`flex-row items-center justify-between py-3 px-4 ${
+          isSelected ? 'bg-blue-50' : 'bg-transparent'
+        }`}
+        onPress={() => toggleContact(item)}
+        accessibilityLabel={`Select contact ${displayName}`}
+      >
+        <View className="flex-row items-center flex-1">
+          <View className="items-center justify-center w-10 h-10 mr-3 bg-gray-100 rounded-full">
+            <Text className="text-base font-medium text-gray-600">{initials}</Text>
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text className="text-sm text-gray-500 mt-1" numberOfLines={1}>
+              {phoneNumber}
+            </Text>
+          </View>
+        </View>
+        {isSelected && (
+          <View className="items-center justify-center w-6 h-6 rounded-full bg-blue-600">
+            <Icon name="check" size={14} color="#FFFFFF" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <SafeAreaView className="flex-1 h-full bg-black/50" edges={['top', 'left', 'right']}>
-        {/* Contact Selector Modal */}
-        {showContactSelector && (
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={showContactSelector}
-            onRequestClose={() => setShowContactSelector(false)}
-          >
-            <SafeAreaView className="flex-1 " edges={['top', 'left', 'right']}>
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'height' : 'height'}
-                keyboardVerticalOffset={0}
-                className="justify-end flex-1 "
-              >
-                <ContactSelector
-                  visible={showContactSelector}
-                  onClose={() => setShowContactSelector(false)}
-                  onDone={(contacts: ExtendedContact[]) => {
-                    const deviceContacts = contacts.map(contact => ({
-                      ...contact,
-                      isContactFromDevice: true,
-                    }));
-                    setSelectedContacts([...deviceContacts, ...importedContacts]);
-                    setShowContactSelector(false);
-                  }}
-                  initialSelectedContacts={selectedContacts.filter(c => c.isContactFromDevice)}
-                />
-              </KeyboardAvoidingView>
-            </SafeAreaView>
-          </Modal>
-        )}
-
-        {/* Imported Contacts Modal */}
-        {showImportedModal && (
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={showImportedModal}
-            onRequestClose={() => setShowImportedModal(false)}
-          >
-            <SafeAreaView className="flex-1  h-full bg-black/50" edges={['top', 'left', 'right']}>
-              <View className="bg-white rounded-t-[32px] shadow-2xl flex-1">
-                <View className="p-6">
-                  <View className="flex-row items-center justify-between mb-6">
-                    <Text className="text-2xl font-bold text-gray-900">Imported Contacts</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowImportedModal(false)}
-                      accessibilityLabel="Close imported contacts modal"
-                      className="items-center justify-center w-10 h-10 rounded-full bg-gray-50"
-                    >
-                      <Icon name="close" size={20} color="#64748b" />
-                    </TouchableOpacity>
-                  </View>
-                  {importedContacts.length > 0 ? (
-                    <FlatList
-                      data={importedContacts}
-                      keyExtractor={item => item.id as string}
-                      renderItem={({ item }) => (
-                        <View className="p-3 border-b border-gray-200">
-                          <Text className="text-gray-900">{item.name}</Text>
-                          <Text className="text-gray-500">{item?.phoneNumbers?.[0]?.number}</Text>
-                        </View>
-                      )}
-                      contentContainerStyle={{ paddingBottom: 20 }}
-                    />
-                  ) : (
-                    <Text className="text-center text-gray-500">No imported contacts</Text>
-                  )}
-                </View>
-              </View>
-            </SafeAreaView>
-          </Modal>
-        )}
-
-        {/* Main Create Group Modal */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="justify-end flex-1"
-        >
-          <View className="bg-white rounded-t-[32px] shadow-2xl">
-            <View className="p-6">
-              <View className="flex-row items-center justify-between mb-6">
-                <View>
-                  <Text className="text-2xl font-bold text-gray-900">
-                    {isEditing ? 'Edit Group' : 'Create New Group'}
-                  </Text>
-                  <Text className="mt-1 text-gray-500">
-                    {isEditing ? 'Update your group details' : 'Create a new group with contacts'}
-                  </Text>
-                </View>
+    <Modal
+      isVisible={visible}
+      onBackdropPress={onClose}
+      onSwipeComplete={onClose}
+      swipeDirection="down"
+      style={{ margin: 0, justifyContent: 'flex-end' }}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      animationInTiming={Platform.OS === 'ios' ? 500 : 300}
+      animationOutTiming={Platform.OS === 'ios' ? 500 : 300}
+      useNativeDriver={Platform.OS !== 'ios'}
+      propagateSwipe={true}
+      avoidKeyboard={Platform.OS === 'ios'}
+    >
+      <SafeAreaView className="bg-white rounded-t-3xl shadow-lg" style={{ height: '70%' }}>
+        <View className="flex-1 p-5">
+          {showContactSelection ? (
+            <View className="flex-1">
+              <View className="flex-row items-center justify-between mb-4">
                 <TouchableOpacity
-                  onPress={onClose}
-                  accessibilityLabel="Close group modal"
-                  className="items-center justify-center w-10 h-10 rounded-full bg-gray-50"
+                  onPress={() => setShowContactSelection(false)}
+                  accessibilityLabel="Back to group form"
                 >
+                  <Icon name="arrow-left" size={20} color="#64748b" />
+                </TouchableOpacity>
+                <Text className="text-2xl font-bold text-gray-900">Select Contacts</Text>
+                <TouchableOpacity onPress={onClose} accessibilityLabel="Close modal">
                   <Icon name="close" size={20} color="#64748b" />
                 </TouchableOpacity>
               </View>
-
-              <View className="mb-6 space-y-5">
-                <View>
-                  <Text className="mb-2 font-medium text-gray-700">Group Name</Text>
-                  <TextInput
-                    className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-base"
-                    placeholder="Enter group name"
-                    placeholderTextColor="#94a3b8"
-                    value={groupName}
-                    onChangeText={setGroupName}
+              <View className="flex-row items-center mb-4 bg-gray-100 rounded-2xl px-3 py-2">
+                <Icon name="search" size={16} color="#64748b" />
+                <TextInput
+                  className="flex-1 ml-2 text-base"
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  accessibilityLabel="Search contacts"
+                />
+              </View>
+              {isLoading ? (
+                <View className="flex-1 items-center justify-center">
+                  <ActivityIndicator size="large" color="#1E3A8A" />
+                  <Text className="mt-3 text-base text-gray-500">Loading contacts...</Text>
+                </View>
+              ) : filteredContacts.length === 0 ? (
+                <View className="flex-1 items-center justify-center">
+                  <Icon name="search" size={24} color="#94a3b8" />
+                  <Text className="text-base text-gray-500 mt-3">No contacts found</Text>
+                </View>
+              ) : (
+                <View className="flex-1">
+                  <FlatList
+                    data={filteredContacts}
+                    keyExtractor={item => item.id as string}
+                    renderItem={renderContactItem}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.3}
+                    ListFooterComponent={
+                      hasMore && !searchQuery ? (
+                        <View className="items-center py-3">
+                          <Text className="text-sm text-gray-500">Scroll to load more...</Text>
+                        </View>
+                      ) : null
+                    }
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 16 }}
+                    initialNumToRender={5}
+                    maxToRenderPerBatch={10}
+                    windowSize={Platform.OS === 'ios' ? 3 : 5}
+                    removeClippedSubviews={true}
                   />
                 </View>
-
-                <View>
-                  <Text className="my-2 font-medium text-gray-700">Description (Optional)</Text>
-                  <TextInput
-                    className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-base"
-                    placeholder="Enter description"
-                    placeholderTextColor="#94a3b8"
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                    numberOfLines={3}
-                    style={{ height: 100, textAlignVertical: 'top' }}
-                  />
-                </View>
-
-                <View>
-                  <Text className="my-2 font-medium text-gray-700">Add Contacts</Text>
-                  <View className="space-y-3">
-                    {/* Device Contacts Selector */}
+              )}
+              <View className="border-t border-gray-200 pt-4">
+                <TouchableOpacity
+                  className="items-center py-4 rounded-xl bg-blue-600"
+                  onPress={() => setShowContactSelection(false)}
+                  accessibilityLabel="Done selecting contacts"
+                >
+                  <Text className="text-lg font-semibold text-white">
+                    Done • {selectedContacts.length} selected
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View className="flex-1">
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-2xl font-bold text-gray-900">
+                  {isEditing ? 'Edit Group' : 'Create New Group'}
+                </Text>
+                <TouchableOpacity onPress={onClose} accessibilityLabel="Close modal">
+                  <Icon name="close" size={20} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-1 mb-4">
+                <View className="space-y-5">
+                  <View>
+                    <Text className="mb-2 font-medium text-gray-700">Group Name</Text>
+                    <TextInput
+                      className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                      placeholder="Enter group name"
+                      value={groupName}
+                      onChangeText={setGroupName}
+                      accessibilityLabel="Group name input"
+                    />
+                  </View>
+                  <View>
+                    <Text className="mb-2 font-medium text-gray-700">Description (Optional)</Text>
+                    <TextInput
+                      className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                      placeholder="Enter description"
+                      value={description}
+                      onChangeText={setDescription}
+                      multiline
+                      numberOfLines={3}
+                      style={{ height: 100, textAlignVertical: 'top' }}
+                      accessibilityLabel="Group description input"
+                    />
+                  </View>
+                  <View>
+                    <Text className="mb-2 font-medium text-gray-700">Add Contacts</Text>
                     <TouchableOpacity
                       className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
-                      onPress={() => setShowContactSelector(true)}
-                      accessibilityLabel="Select contacts for group"
+                      onPress={() => setShowContactSelection(true)}
+                      accessibilityLabel="Select contacts"
                     >
                       <Text
-                        className={
-                          selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                            ? 'text-gray-900'
-                            : 'text-gray-400'
-                        }
+                        className={selectedContacts.length > 0 ? 'text-gray-900' : 'text-gray-400'}
                       >
-                        {selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                          ? `${
-                              selectedContacts.filter(c => c.isContactFromDevice).length
-                            } contacts selected`
+                        {selectedContacts.length > 0
+                          ? `${selectedContacts.length} contacts selected`
                           : 'Select contacts'}
                       </Text>
-                      <View className="flex-row items-center">
-                        {selectedContacts.filter(c => c.isContactFromDevice).length > 0 && (
-                          <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                            <Text className="text-sm font-medium text-white">
-                              {selectedContacts.filter(c => c.isContactFromDevice).length}
-                            </Text>
-                          </View>
-                        )}
-                        <Icon name="chevron-right" size={16} color="#64748b" />
-                      </View>
+                      <Icon name="chevron-right" size={16} color="#64748b" />
                     </TouchableOpacity>
-
-                    {/* Import or Show Imported Contacts */}
                     <TouchableOpacity
-                      className="flex-row items-center mt-4 justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
-                      onPress={
-                        importedContacts.length > 0
-                          ? () => setShowImportedModal(true)
-                          : handleFileImport
-                      }
+                      className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl mt-3"
+                      onPress={handleFileImport}
                       disabled={isImporting}
-                      accessibilityLabel={
-                        importedContacts.length > 0
-                          ? 'Show imported contacts'
-                          : 'Import contacts from file'
-                      }
+                      accessibilityLabel="Import contacts from file"
                     >
                       <View className="flex-row items-center">
                         <Icon
@@ -426,19 +552,20 @@ export default function CreateGroupModal({
                   </View>
                 </View>
               </View>
-
-              <TouchableOpacity
-                className="items-center py-4 rounded-xl bg-primary"
-                onPress={handleSave}
-                accessibilityLabel="Save group"
-              >
-                <Text className="text-base font-semibold text-white">
-                  {isEditing ? 'Update Group' : 'Create Group'}
-                </Text>
-              </TouchableOpacity>
+              <View className="border-t border-gray-200 pt-4">
+                <TouchableOpacity
+                  className="items-center py-4 rounded-xl bg-blue-600"
+                  onPress={handleSave}
+                  accessibilityLabel={isEditing ? 'Update group' : 'Create group'}
+                >
+                  <Text className="text-lg font-semibold text-white">
+                    {isEditing ? 'Update Group' : 'Create Group'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          )}
+        </View>
       </SafeAreaView>
     </Modal>
   );
