@@ -27,7 +27,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: "InterMedium",
+          fontFamily: 'InterMedium',
         },
         // lazy: true,
         tabBarShowLabel: true,
@@ -37,35 +37,29 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'home',
           tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="groups"
         options={{
-          title: "Groups",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="users" size={size} color={color} />
-          ),
+          title: 'Groups',
+          tabBarIcon: ({ color, size }) => <Icon name="users" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calling"
         options={{
-          title: "Call",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="phone" size={size} color={color} />
-          ),
+          title: 'Call',
+          tabBarIcon: ({ color, size }) => <Icon name="phone" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="gear" size={size} color={color} />
-          ),
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Icon name="gear" size={size} color={color} />,
         }}
       />
     </Tabs>
