@@ -179,7 +179,7 @@ export default function SignupScreen() {
   if (!isStorageReady) {
     return (
       <View className="items-center justify-center flex-1 bg-background-primary">
-        <Text className="text-lg text-gray-600">Initializing app...</Text>
+        <Text className="text-lg text-text-primary">Initializing app...</Text>
       </View>
     );
   }
@@ -195,8 +195,8 @@ export default function SignupScreen() {
             <View className="items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary">
               <Icon name="phone" size={30} color="#fff" />
             </View>
-            <Text className="text-3xl font-bold text-center text-dark">mass caller</Text>
-            <Text className="mt-2 text-center text-gray-500">
+            <Text className="text-3xl font-bold text-center text-text-primary">mass caller</Text>
+            <Text className="mt-2 text-center text-text-secondary">
               {showOTP ? 'Verify your phone number' : 'Create your account'}
             </Text>
           </View>
@@ -219,10 +219,10 @@ export default function SignupScreen() {
 
           {!showOTP && (
             <View className="flex-row justify-center mt-6">
-              <Text className="text-gray-600">Already have an account? </Text>
+              <Text className="text-text-secondary">Already have an account? </Text>
               <Link href="/(auth)/login" asChild>
                 <TouchableOpacity>
-                  <Text className="font-medium text-secondary">Log In</Text>
+                  <Text className="font-medium underline text-secondary">Log In</Text>
                 </TouchableOpacity>
               </Link>
             </View>

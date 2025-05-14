@@ -51,7 +51,7 @@ const PasswordInput: React.FC<{
   return (
     <View className="relative">
       <TextInput
-        className="p-4 pr-10 bg-white border border-gray-300 rounded-lg"
+        className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
         placeholder={placeholder}
         value={value}
         onChangeText={onChange}
@@ -100,16 +100,16 @@ const PhoneInput: React.FC<{
   }, [countryCode]);
 
   return (
-    <View className="flex-row items-center overflow-hidden bg-white border border-gray-300 rounded-lg">
+    <View className="flex-row items-center overflow-hidden border border-gray-300 rounded-lg bg-background-primary">
       <TouchableOpacity
         onPress={() => setShowCountryPicker(true)}
         className="flex-row items-center h-12 px-3 border-r border-gray-300"
       >
-        <Text className="mr-1 text-gray-700">{countryCode}</Text>
+        <Text className="mr-1 text-text-primary">{countryCode}</Text>
         <Icon name="chevron-down" size={16} color="gray" />
       </TouchableOpacity>
       <TextInput
-        className="flex-1 p-4"
+        className="flex-1 p-4 placeholder:text-text-secondary"
         placeholder={placeholder}
         value={value}
         onChangeText={handlePhoneChange}
@@ -123,7 +123,7 @@ const PhoneInput: React.FC<{
         onRequestClose={() => setShowCountryPicker(false)}
       >
         <View className="items-center justify-center flex-1 bg-black/50">
-          <View className="w-4/5 p-4 bg-white rounded-lg">
+          <View className="w-4/5 p-4 rounded-lg bg-background-primary">
             {commonCountryCodes.map(item => (
               <TouchableOpacity
                 key={item.code}
@@ -133,7 +133,7 @@ const PhoneInput: React.FC<{
                 }}
                 className="py-3 border-b border-gray-200"
               >
-                <Text className="text-gray-700">
+                <Text className="text-text-primary">
                   {item.country} ({item.code})
                 </Text>
               </TouchableOpacity>
@@ -142,7 +142,7 @@ const PhoneInput: React.FC<{
               onPress={() => setShowCountryPicker(false)}
               className="items-center py-3 mt-4 bg-gray-100 rounded-lg"
             >
-              <Text className="text-gray-700">Close</Text>
+              <Text className="text-text-primary">Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -155,8 +155,8 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
   return (
     <View className="w-full">
       {fields.map(field => (
-        <View key={field.name} className="mb-4">
-          <Text className="mb-2 font-medium text-gray-700">{field.label}</Text>
+        <View key={field.name} className="mb-4 ">
+          <Text className="mb-2 font-medium text-text-primary">{field.label}</Text>
           <Controller
             control={control}
             name={field.name}
@@ -183,7 +183,7 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
               }
               return (
                 <TextInput
-                  className="p-4 bg-white border border-gray-300 rounded-lg"
+                  className="p-4 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
                   placeholder={field.placeholder}
                   value={value}
                   onChangeText={onChange}

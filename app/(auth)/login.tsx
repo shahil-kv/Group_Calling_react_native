@@ -61,8 +61,8 @@ export default function LoginScreen() {
             <View className="items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary">
               <Icon name="phone" size={32} color="#FFFFFF" />
             </View>
-            <Text className="text-3xl font-bold text-center text-dark">mass caller</Text>
-            <Text className="mt-2 text-center text-gray-500">
+            <Text className="text-3xl font-bold text-center text-text-primary">mass caller</Text>
+            <Text className="mt-2 text-center text-text-secondary">
               Connect with your groups efficiently
             </Text>
           </View>
@@ -82,10 +82,10 @@ export default function LoginScreen() {
           />
 
           <View className="flex-row justify-center mt-6">
-            <Text className="text-gray-600">Dont have an account? </Text>
+            <Text className="text-text-secondary">Don't have an account? </Text>
             <Link href="/(auth)/signup" asChild>
               <TouchableOpacity>
-                <Text className="font-medium text-secondary">Sign Up</Text>
+                <Text className="font-medium underline text-secondary">Sign Up</Text>
               </TouchableOpacity>
             </Link>
           </View>

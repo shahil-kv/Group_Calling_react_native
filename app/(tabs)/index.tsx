@@ -4,6 +4,8 @@ import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserStore } from '@/stores/userStore';
 import CallHistoryItem from '../../components/CallHistoryItem';
 import Header from '../../components/Header';
 import QuickAction from '../../components/QuickAction';
@@ -19,6 +21,14 @@ export default function HomeScreen() {
   // Mock data for demo purposes
   const contacts = [];
   const groups: Group[] = [];
+  // Get user data from Auth Context
+  const { user: authUser } = useAuth();
+
+  // Get user data from Zustand store (if you're using it)
+  const storeUser = useUserStore(state => state.user);
+
+  // Determine which user object to use (prioritize the one with name data)
+  const user = authUser || storeUser;
 
   // Recent calls would come from a call history store in a real implementation
   const recentCalls = [
@@ -45,7 +55,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-background-primary">
       <ScrollView>
-        <Header title="Welcome back" subtitle="Alex" showBell={true} />
+        <Header title="Welcome back" subtitle={user?.email} showBell={true} />
 
         {/* Account status */}
         <StatusCard

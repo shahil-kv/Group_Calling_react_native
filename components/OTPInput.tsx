@@ -11,7 +11,7 @@ interface OTPInputProps {
 export default function CustomOTPInput({ value, onChange, numberOfDigits = 6, label }: OTPInputProps) {
   return (
     <View>
-      {label && <Text className="mb-2 font-medium text-gray-700">{label}</Text>}
+      {label && <Text className="mb-2 font-medium text-text-primary">{label}</Text>}
       <OtpInput
         numberOfDigits={numberOfDigits}
         onTextChange={onChange}
