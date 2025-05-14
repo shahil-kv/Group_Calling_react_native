@@ -3,38 +3,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
 import { ExtendedContact } from '@/types/contact.types';
 import { Group, GroupItemProps, GroupModelReGroup, SearchBarProps } from '@/types/group.types';
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import parsePhoneNumberFromString from 'libphonenumber-js';
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Alert, RefreshControl, TouchableOpacity, View } from 'react-native';
-import { FlatList, Text, TextInput } from 'react-native-gesture-handler';
+import { Alert, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { FlatList } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 
-const normalizePhoneNumber = (phone: string): string => {
-  const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
-  return phoneNumber && phoneNumber.isValid() ? phoneNumber.formatInternational() : phone;
-};
-
-const SearchBar = memo(({ value, onChangeText }: SearchBarProps) => (
-  <View className="flex-row items-center flex-1 p-3 bg-white border border-gray-200 rounded-lg">
-    <Icon name="search" size={18} color="#64748b" />
-    <TextInput
-      className="flex-1 px-2"
-      placeholder="Search groups..."
-      value={value}
-      onChangeText={onChangeText}
-      accessibilityLabel="Search groups"
-    />
-    {value ? (
-      <TouchableOpacity onPress={() => onChangeText('')} accessibilityLabel="Clear search">
-        <Icon name="close" size={22} color="#64748b" />
-      </TouchableOpacity>
-    ) : null}
-  </View>
-));
+const SearchBar = memo(({ value, onChangeText }: SearchBarProps) => {
+  return (
+    <View className="flex-row items-center flex-1 p-3 bg-white border border-gray-200 rounded-lg">
+      <Icon name="search" size={18} color="#64748b" />
+      <TextInput
+        accessibilityLabel="Search groups"
+        className="flex-1 px-2"
+        value={value}
+        placeholder="Search groups"
+        onChangeText={onChangeText}
+      ></TextInput>
+    </View>
+  );
+});
 
 const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
-  <TouchableOpacity
+  <Pressable
     key={`group-item-${group.id}`}
     className="p-4 mb-3 bg-white rounded-lg shadow-sm"
     accessibilityLabel={`View group ${group.name}`}
@@ -50,7 +42,7 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
         <Text className="text-sm text-gray-500">{group.contacts.length} contacts</Text>
       </View>
       <View className="flex-row items-center">
-        <TouchableOpacity
+        <Pressable
           className="p-3 rounded-full"
           onPress={e => {
             e.stopPropagation();
@@ -59,8 +51,8 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
           accessibilityLabel={`Edit group ${group.name}`}
         >
           <Icon name="edit" size={22} color="#1E3A8A" />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Pressable>
+        <Pressable
           className="p-3 rounded-full"
           onPress={e => {
             e.stopPropagation();
@@ -69,13 +61,13 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
           accessibilityLabel={`Delete group ${group.name}`}
         >
           <Icon name="trash" size={24} color="#EF4444" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
     {group.description ? (
       <Text className="mt-2 text-gray-500 pl-13">{group.description}</Text>
     ) : null}
-  </TouchableOpacity>
+  </Pressable>
 ));
 
 const EmptyState = memo(
@@ -87,25 +79,26 @@ const EmptyState = memo(
           : 'You have no groups yet. Create your first group to get started.'}
       </Text>
       {!searchQuery && (
-        <TouchableOpacity
+        <Pressable
           className="px-4 py-2 rounded-lg bg-primary"
           onPress={onCreateGroup}
           accessibilityLabel="Create your first group"
         >
           <Text className="font-medium text-white">Create Group</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   )
 );
 
-export default function GroupsScreen() {
+const GroupsScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
+
   const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
 
   // Fetch groups using useQuery
@@ -131,8 +124,31 @@ export default function GroupsScreen() {
     showLoader: true,
   });
 
-  // Define cleanContactId before it's used
+  const stableCrudGroup = useCallback((params: any) => crudGroup(params), [crudGroup]);
+
+  const clearForm = useCallback(() => {
+    setCurrentGroupId(null);
+    setIsEditing(false);
+    setModalVisible(false);
+  }, []);
+
+  const handleCreateGroup = useCallback(() => {
+    clearForm();
+    setTimeout(() => {
+      setModalVisible(true);
+    }, 0);
+  }, [clearForm]);
+
+  /**
+   * * did not used memo and useCallBack because in this case this is pure functions and did not have any changes one run in groups and it is also memoized same for normalizePhoneNumber
+   * @summary Define cleanContactId before it's used
+   */
   const cleanContactId = (id: string) => id.replace(':ABPerson', '');
+
+  const normalizePhoneNumber = (phone: string): string => {
+    const phoneNumber = parsePhoneNumberFromString(phone, 'IN');
+    return phoneNumber && phoneNumber.isValid() ? phoneNumber.formatInternational() : phone;
+  };
 
   // Transform fetchedGroups directly for rendering
   const groups = useMemo(() => {
@@ -168,14 +184,38 @@ export default function GroupsScreen() {
     }));
   }, [fetchedGroups]);
 
-  const stableCrudGroup = useCallback((params: any) => crudGroup(params), [crudGroup]);
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return groups;
 
-  // Handle pull-to-refresh
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchGroups();
-    setIsRefreshing(false);
-  }, [fetchGroups]);
+    const query = searchQuery.toLowerCase();
+    return groups.filter(
+      (group: Group) =>
+        group.name.toLowerCase().includes(query) ||
+        group.description?.toLowerCase().includes(query) ||
+        group.contacts.some(contact => contact.name.toLowerCase().includes(query))
+    );
+  }, [groups, searchQuery]);
+
+  const handleEditGroup = useCallback((groupId: string) => {
+    setCurrentGroupId(groupId);
+    setIsEditing(true);
+    setModalVisible(true);
+  }, []);
+
+  const deleteGroupById = useCallback(
+    async (id: string) => {
+      try {
+        if (!stableUserId) {
+          throw new Error('User ID is not available');
+        }
+        await stableCrudGroup({ groupId: id, opsMode: 'DELETE', userId: stableUserId });
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        Alert.alert('Error', 'Failed to delete group. Please try again.');
+      }
+    },
+    [stableCrudGroup, stableUserId]
+  );
 
   const handleAddGroup = useCallback(
     async (groupData: { name: string; description: string; contacts: ExtendedContact[] }) => {
@@ -214,26 +254,12 @@ export default function GroupsScreen() {
     [isEditing, currentGroupId, user, stableCrudGroup]
   );
 
-  const handleEditGroup = useCallback((groupId: string) => {
-    setCurrentGroupId(groupId);
-    setIsEditing(true);
-    setModalVisible(true);
-  }, []);
-
-  const deleteGroupById = useCallback(
-    async (id: string) => {
-      try {
-        if (!stableUserId) {
-          throw new Error('User ID is not available');
-        }
-        await stableCrudGroup({ groupId: id, opsMode: 'DELETE', userId: stableUserId });
-      } catch (error) {
-        console.error('Error deleting group:', error);
-        Alert.alert('Error', 'Failed to delete group. Please try again.');
-      }
-    },
-    [stableCrudGroup, stableUserId]
-  );
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchGroups().then(() => {
+      setIsRefreshing(false);
+    });
+  }, [fetchGroups]);
 
   const handleDeleteGroup = useCallback(
     (id: string) => {
@@ -245,29 +271,6 @@ export default function GroupsScreen() {
     [deleteGroupById]
   );
 
-  const clearForm = useCallback(() => {
-    setCurrentGroupId(null);
-    setIsEditing(false);
-    setModalVisible(false);
-  }, []);
-
-  const filteredGroups = useMemo(() => {
-    if (!searchQuery) return groups;
-
-    const query = searchQuery.toLowerCase();
-    return groups.filter(
-      (group: Group) =>
-        group.name.toLowerCase().includes(query) ||
-        group.description?.toLowerCase().includes(query) ||
-        group.contacts.some(contact => contact.name.toLowerCase().includes(query))
-    );
-  }, [groups, searchQuery]);
-
-  const handleCreateGroup = useCallback(() => {
-    clearForm();
-    setTimeout(() => setModalVisible(true), 0);
-  }, [clearForm]);
-
   const renderGroupItem = useCallback(
     ({ item }: { item: Group }) => (
       <GroupItem group={item} onEdit={handleEditGroup} onDelete={handleDeleteGroup} />
@@ -275,28 +278,29 @@ export default function GroupsScreen() {
     [handleEditGroup, handleDeleteGroup]
   );
 
+  const handleModalHide = useCallback(() => {
+    clearForm();
+  }, []);
+
   return (
-    <SafeAreaView className="flex-1 px-4 bg-background" edges={['top', 'left', 'right']}>
+    <SafeAreaView className="flex-1  px-4" edges={['top', 'left', 'right']}>
       <View>
         <Text className="text-2xl font-bold text-dark">Groups</Text>
         <Text className="text-gray-500">Manage your contact groups</Text>
       </View>
-
-      <View className="flex-row items-center my-4">
+      <View className="flex-row my-4 ">
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
       </View>
-
       <View className="mb-4">
-        <TouchableOpacity
+        <Pressable
+          className="flex-row  justify-center items-center py-4 gap-4  rounded-xl bg-primary"
           onPress={handleCreateGroup}
-          className="flex-row items-center justify-center gap-3 py-4 rounded-lg bg-primary"
           accessibilityLabel="Create new group"
         >
-          <Icon name="user" size={18} color="#FFFFFF" />
-          <Text className="font-medium text-white">Create New Group</Text>
-        </TouchableOpacity>
+          <Icon name="user-plus" size={20} color="#ffff" />
+          <Text className="text-white font-medium">Create new group</Text>
+        </Pressable>
       </View>
-
       {filteredGroups.length > 0 ? (
         <FlatList
           data={filteredGroups}
@@ -308,15 +312,14 @@ export default function GroupsScreen() {
       ) : (
         <EmptyState searchQuery={searchQuery} onCreateGroup={handleCreateGroup} />
       )}
-
       <CreateGroupModal
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
-          clearForm();
         }}
         onSave={handleAddGroup}
         isEditing={isEditing}
+        onModalHide={handleModalHide}
         initialData={
           isEditing && currentGroupId
             ? {
@@ -329,4 +332,6 @@ export default function GroupsScreen() {
       />
     </SafeAreaView>
   );
-}
+};
+
+export default GroupsScreen;
