@@ -119,7 +119,7 @@ module.exports = {
           // Dark mode colors with StatusCard-inspired palette
           '--color-primary': '#818CF8',          // Indigo 400
           '--color-secondary': '#A78BFA',        // Violet 400
-          '--color-tertiary': '#1E293B',         // Slate 800
+          '--color-tertiary': '#6b7280',         // Slate 800
           '--color-accent': '#F472B6',           // Pink 400
           '--color-success': '#4ADE80',          // Green 400
           '--color-warning': '#FBBF24',          // Amber 400
@@ -127,7 +127,7 @@ module.exports = {
           '--color-info': '#60A5FA',             // Blue 400
           '--color-neutral': '#94A3B8',          // Slate 400
           '--color-background-primary': '#0F172A',       // Slate 900
-          '--color-background-secondary': '#6b7280', // Gray 500
+          '--color-background-secondary': '#1E293B', // Gray 500
           '--color-surface': '#1E293B',          // Slate 800
           '--color-text': '#F8FAFC',             // Slate 50
           '--color-text-secondary': '#CBD5E1',   // Slate 300

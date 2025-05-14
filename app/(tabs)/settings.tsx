@@ -73,7 +73,7 @@ export default function SettingsScreen() {
           <Header title="Settings" subtitle="Manage your account and preferences" />
 
           {/* Account Section */}
-          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+          <View className="p-5 mb-6 shadow-sm bg-background-secondary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Account</Text>
             <SettingsItem label="Email" value="user@example.com" showArrow={false} />
             <SettingsItem label="Subscription" value="Free" showArrow={false} />
@@ -86,7 +86,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Notifications Section */}
-          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+          <View className="p-5 mb-6 shadow-sm bg-background-secondary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Notifications</Text>
             <SettingsItem
               label="Push Notifications"
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Appearance Section (New) */}
-          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+          <View className="p-5 mb-6 shadow-sm bg-background-secondary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Appearance</Text>
             <SettingsItem
               label="Dark Mode"
@@ -110,7 +110,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Legal Section */}
-          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+          <View className="p-5 mb-6 shadow-sm bg-background-secondary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Legal</Text>
             <SettingsItem label="Privacy Policy" onClick={handlePrivacyPolicy} showArrow={true} />
             <SettingsItem label="Terms of Service" onClick={handleTerms} showArrow={true} />

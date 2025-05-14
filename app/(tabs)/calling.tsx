@@ -323,7 +323,7 @@ export default function CallingScreen() {
         <ScrollView className="flex-1">
           {/* Tutorial Section */}
           {showTutorial && (
-            <View className="p-4 mx-4 mb-6 rounded-xl bg-tertiary">
+            <View className="p-4 mx-4 mb-6 rounded-xl bg-background-secondary">
               <View className="flex-row items-center mb-3">
                 <Icon name="info-circle" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-primary">How it works</Text>
@@ -369,7 +369,7 @@ export default function CallingScreen() {
           {/* Main Content */}
           <View className="gap-4 px-4 space-y-4">
             {/* Group Selection */}
-            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
+            <View className="p-4 rounded-lg shadow-sm bg-background-secondary">
               <View className="flex-row items-center mb-3">
                 <Icon name="users" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-text-primary">Select Group</Text>
@@ -401,7 +401,7 @@ export default function CallingScreen() {
             </View>
 
             {/* Contact Selection */}
-            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
+            <View className="p-4 rounded-lg shadow-sm bg-background-secondary">
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center">
                   <Icon name="address-book" size={20} color="#1E3A8A" />
@@ -432,7 +432,7 @@ export default function CallingScreen() {
                     ))}
                     {selectedContacts.length > 5 && (
                       <View className="items-center">
-                        <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-tertiary">
+                        <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-background-secondary">
                           <Text className="font-bold">+{selectedContacts.length - 5}</Text>
                         </View>
                         <Text className="text-xs text-text-secondary">More</Text>
@@ -441,7 +441,7 @@ export default function CallingScreen() {
                   </ScrollView>
                 </View>
               ) : (
-                <View className="items-center p-4 rounded-lg ">
+                <View className="items-center p-4 rounded-lg">
                   <Icon name="user-plus" size={32} color="#94A3B8" />
                   <Text className="mt-2 text-center text-text-secondary">
                     No contacts selected. Select a group or add contacts individually.
@@ -457,7 +457,7 @@ export default function CallingScreen() {
             </View>
 
             {/* Voice Message */}
-            <View className="p-4 rounded-lg shadow-sm bg-tertiary">
+            <View className="p-4 rounded-lg shadow-sm bg-background-secondary">
               <View className="flex-row items-center mb-3">
                 <Icon name="microphone" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-text-primary">Voice Message</Text>
@@ -469,7 +469,7 @@ export default function CallingScreen() {
               </View>
 
               <TouchableOpacity
-                className={`bg-background-secondary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error' : ''
+                className={`bg-tertiary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error' : ''
                   } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
@@ -492,7 +492,7 @@ export default function CallingScreen() {
               </TouchableOpacity>
 
               {recordedMessage && (
-                <View className="p-3 mt-4 rounded-lg bg-tertiary">
+                <View className="p-3 mt-4 rounded-lg bg-background-secondary">
                   <Text className="text-text-secondary">{recordedMessage}</Text>
                 </View>
               )}

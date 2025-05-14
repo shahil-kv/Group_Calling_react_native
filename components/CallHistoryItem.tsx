@@ -34,7 +34,7 @@ const CallHistoryItem = ({ title, timeAgo, contactsReached, status }: CallHistor
   };
 
   return (
-    <View className="p-4 mb-3 shadow-sm bg-tertiary rounded-xl">
+    <View className="p-4 mb-3 shadow-sm bg-background-secondary rounded-xl">
       <View className="flex-row items-center justify-between">
         <Text className="font-medium text-text-primary">{title}</Text>
         <Text className="text-xs text-text-secondary">{timeAgo}</Text>

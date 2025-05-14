@@ -85,7 +85,7 @@ export default function HomeScreen() {
 
             <QuickAction
               iconName="phone"
-              iconColor="#EF4444"
+              iconColor="#3B82F6"
               backgroundColor="bg-error/10"
               label="Start Call"
               onPress={() => router.push('/calling')}
@@ -106,7 +106,7 @@ export default function HomeScreen() {
             groups.slice(0, 3).map((group: any) => (
               <TouchableOpacity
                 key={group.id}
-                className="flex-row items-center justify-between p-4 mb-3 shadow-sm bg-tertiary rounded-xl"
+                className="flex-row items-center justify-between p-4 mb-3 shadow-sm bg-background-secondary rounded-xl"
               // onPress={() => router.push(`/groups/${group.id}`)}
               >
                 <View className="flex-row items-center">
@@ -122,7 +122,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))
           ) : (
-            <View className="items-center justify-center p-6 shadow-sm bg-tertiary rounded-xl">
+            <View className="items-center justify-center p-6 shadow-sm bg-background-secondary rounded-xl">
               <Text className="text-center text-text-secondary">
                 You don't have any groups yet. Create your first group to get started.
               </Text>
@@ -153,7 +153,7 @@ export default function HomeScreen() {
               />
             ))
           ) : (
-            <View className="items-center justify-center p-6 shadow-sm bg-tertiary rounded-xl">
+            <View className="items-center justify-center p-6 shadow-sm bg-background-secondary rounded-xl">
               <Text className="text-center text-text-secondary">
                 You haven't made any calls yet. Start a call to reach your contacts.
               </Text>
