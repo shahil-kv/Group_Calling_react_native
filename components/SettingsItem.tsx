@@ -23,7 +23,7 @@ const SettingsItem = ({
   onClick,
 }: SettingsItemProps) => {
   const renderContent = () => (
-    <View className="flex-row items-center justify-between py-4 border-b border-gray-100">
+    <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
       <Text className="font-medium text-text-secondary">{label}</Text>
       <View className="flex-row items-center">
         {value && <Text className="mr-2 text-text-primary">{value}</Text>}

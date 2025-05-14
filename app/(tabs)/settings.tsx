@@ -11,14 +11,15 @@ import {
   View
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-
 import Header from '../../components/Header';
 import SettingsItem from '../../components/SettingsItem';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const handleUpgrade = () => {
     Alert.alert('Upgrade to Pro', 'Choose your subscription plan:', [
@@ -51,7 +52,6 @@ export default function SettingsScreen() {
         text: 'Log Out',
         style: 'destructive',
         onPress: () => {
-          // Sign out logic would go here
           router.replace('/login');
         },
       },
@@ -75,11 +75,8 @@ export default function SettingsScreen() {
           {/* Account Section */}
           <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Account</Text>
-
             <SettingsItem label="Email" value="user@example.com" showArrow={false} />
-
             <SettingsItem label="Subscription" value="Free" showArrow={false} />
-
             <TouchableOpacity
               className="items-center w-full py-3 mt-4 rounded-lg bg-primary"
               onPress={handleUpgrade}
@@ -91,7 +88,6 @@ export default function SettingsScreen() {
           {/* Notifications Section */}
           <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Notifications</Text>
-
             <SettingsItem
               label="Push Notifications"
               hasToggle={true}
@@ -101,12 +97,22 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* Appearance Section (New) */}
+          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+            <Text className="mb-4 text-lg font-semibold text-text-secondary">Appearance</Text>
+            <SettingsItem
+              label="Dark Mode"
+              hasToggle={true}
+              toggleValue={theme === 'dark'}
+              onToggleChange={(value) => setTheme(value ? 'dark' : 'light')}
+              showArrow={false}
+            />
+          </View>
+
           {/* Legal Section */}
           <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Legal</Text>
-
             <SettingsItem label="Privacy Policy" onClick={handlePrivacyPolicy} showArrow={true} />
-
             <SettingsItem label="Terms of Service" onClick={handleTerms} showArrow={true} />
           </View>
 

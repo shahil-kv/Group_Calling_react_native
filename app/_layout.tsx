@@ -30,7 +30,7 @@ const StatusBarWithTheme = () => {
   return (
     <StatusBar
       style={theme === 'dark' ? 'light' : 'dark'}
-      backgroundColor={theme === 'dark' ? '#1E1E1E' : '#F8FAFC'} // Matches tailwind.config.js
+      backgroundColor={theme === 'dark' ? '#0F172A' : '#F8FAFC'}
     />
   );
 };
@@ -137,12 +137,12 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <LoaderProvider>
             <AuthProvider>
+              <StatusBarWithTheme />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" />
               </Stack>
-              <StatusBarWithTheme />
               <Toast />
             </AuthProvider>
           </LoaderProvider>

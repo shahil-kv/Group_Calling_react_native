@@ -8,8 +8,8 @@ export default function TabLayout() {
   const { theme } = useTheme();
 
   // Define theme-specific colors
-  const activeTintColor = theme === 'dark' ? '#5bd1e7' : '#1E3A8A'; // primary
-  const inactiveTintColor = theme === 'dark' ? '#4B5563' : '#64748B'; // neutral
+  const activeTintColor = theme === 'dark' ? '#818CF8' : '#1E3A8A'; // primary
+  const inactiveTintColor = theme === 'dark' ? '#94A3B8' : '#64748B'; // neutral
   const tabBarBackground = theme === 'dark' ? '#1E1E1E' : '#F8FAFC'; // background
   const tabBarBorderTopColor = theme === 'dark' ? '#4B5563' : '#E2E8F0'; // borderTopColor
 
@@ -29,6 +29,8 @@ export default function TabLayout() {
           fontSize: 12,
           fontFamily: "InterMedium",
         },
+        lazy: true,
+        tabBarShowLabel: true,
         headerShown: false,
       }}
     >
