@@ -242,7 +242,7 @@ export default function CreateGroupModal({
       .slice(0, 2);
 
     return (
-      <View className="flex-row items-center justify-between py-3 px-4">
+      <View className="flex-row items-center justify-between px-4 py-3">
         <View className="flex-row items-center flex-1">
           <View className="items-center justify-center w-10 h-10 mr-3 bg-gray-100 rounded-full">
             <Text className="text-base font-medium text-gray-600">{initials}</Text>
@@ -251,7 +251,7 @@ export default function CreateGroupModal({
             <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
               {displayName}
             </Text>
-            <Text className="text-sm text-gray-500 mt-1" numberOfLines={1}>
+            <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
               {phoneNumber}
             </Text>
           </View>
@@ -263,7 +263,7 @@ export default function CreateGroupModal({
   const ImportedContactsFooter = useCallback(
     () => (
       <View
-        className="border-t border-gray-200 pt-4 bg-white"
+        className="pt-4 bg-white border-t border-gray-200"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -274,7 +274,7 @@ export default function CreateGroupModal({
         }}
       >
         <TouchableOpacity
-          className="items-center py-4 rounded-xl bg-blue-600"
+          className="items-center py-4 bg-blue-600 rounded-xl"
           onPress={() => setShowImportedContacts(false)}
           accessibilityLabel="Done viewing imported contacts"
         >
@@ -309,11 +309,11 @@ export default function CreateGroupModal({
       propagateSwipe
     >
       <SafeAreaView
-        className="bg-white rounded-t-3xl shadow-lg"
+        className="bg-white shadow-lg rounded-t-3xl"
         style={{ height: showImportedContacts || showContactSelection ? '93%' : '65%' }}
       >
         {isModalReady ? (
-          <View className="flex-1 relative">
+          <View className="relative flex-1">
             {showContactSelection ? (
               <ContactSelector
                 onDone={handleContactsSelected}
@@ -336,9 +336,9 @@ export default function CreateGroupModal({
                     </TouchableOpacity>
                   </View>
                   {importedContacts.length === 0 ? (
-                    <View className="flex-1 items-center justify-center">
+                    <View className="items-center justify-center flex-1">
                       <Icon name="file-excel-o" size={24} color="#94a3b8" />
-                      <Text className="text-base text-gray-500 mt-3">No imported contacts</Text>
+                      <Text className="mt-3 text-base text-gray-500">No imported contacts</Text>
                     </View>
                   ) : (
                     <View className="flex-1">
@@ -376,6 +376,7 @@ export default function CreateGroupModal({
                       <TextInput
                         className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
                         placeholder="Enter group name"
+                        placeholderTextColor="#64748b"
                         value={groupName}
                         onChangeText={setGroupName}
                         accessibilityLabel="Group name input"
@@ -386,6 +387,7 @@ export default function CreateGroupModal({
                       <TextInput
                         className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
                         placeholder="Enter description"
+                        placeholderTextColor="#64748b"
                         value={description}
                         onChangeText={setDescription}
                         multiline
@@ -409,9 +411,8 @@ export default function CreateGroupModal({
                           }
                         >
                           {selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                            ? `${
-                                selectedContacts.filter(c => c.isContactFromDevice).length
-                              } contacts selected`
+                            ? `${selectedContacts.filter(c => c.isContactFromDevice).length
+                            } contacts selected`
                             : 'Select contacts'}
                         </Text>
                         <Icon name="chevron-right" size={16} color="#64748b" />
@@ -441,8 +442,8 @@ export default function CreateGroupModal({
                             {isImporting
                               ? 'Importing...'
                               : importedContacts.length > 0
-                              ? `${importedContacts.length} contacts imported`
-                              : 'Import from Excel/CSV'}
+                                ? `${importedContacts.length} contacts imported`
+                                : 'Import from Excel/CSV'}
                           </Text>
                         </View>
                         {isImporting ? (
@@ -461,9 +462,9 @@ export default function CreateGroupModal({
                     </View>
                   </View>
                 </View>
-                <View className="border-t border-gray-200 pt-4">
+                <View className="pt-4 border-t border-gray-200">
                   <TouchableOpacity
-                    className="items-center py-4 rounded-xl bg-blue-600"
+                    className="items-center py-4 bg-blue-600 rounded-xl"
                     onPress={handleSave}
                     accessibilityLabel={isEditing ? 'Update group' : 'Create group'}
                   >
@@ -476,7 +477,7 @@ export default function CreateGroupModal({
             )}
           </View>
         ) : (
-          <View className="flex-1 items-center justify-center">
+          <View className="items-center justify-center flex-1">
             <ActivityIndicator size="large" color="#1E3A8A" />
           </View>
         )}

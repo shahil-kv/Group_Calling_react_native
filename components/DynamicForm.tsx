@@ -53,6 +53,7 @@ const PasswordInput: React.FC<{
       <TextInput
         className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
         placeholder={placeholder}
+        placeholderTextColor="#64748b"
         value={value}
         onChangeText={onChange}
         secureTextEntry={!showPassword}
@@ -111,6 +112,7 @@ const PhoneInput: React.FC<{
       <TextInput
         className="flex-1 p-4 placeholder:text-text-secondary"
         placeholder={placeholder}
+        placeholderTextColor="#64748b"
         value={value}
         onChangeText={handlePhoneChange}
         keyboardType="phone-pad"
@@ -185,6 +187,7 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
                 <TextInput
                   className="p-4 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
                   placeholder={field.placeholder}
+                  placeholderTextColor="#64748b"
                   value={value}
                   onChangeText={onChange}
                   keyboardType={getKeyboardType(field.type)}

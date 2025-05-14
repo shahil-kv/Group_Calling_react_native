@@ -12,11 +12,12 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 
 const SearchBar = memo(({ value, onChangeText }: SearchBarProps) => {
   return (
-    <View className="flex-row items-center flex-1 p-3 bg-white border border-gray-200 rounded-lg">
+    <View className="flex-row items-center flex-1 p-3 border border-gray-200 rounded-lg bg-background-primary">
       <Icon name="search" size={18} color="#64748b" />
       <TextInput
         accessibilityLabel="Search groups"
-        className="flex-1 px-2"
+        className="flex-1 px-2 text-text-primary"
+        placeholderTextColor="#64748b"
         value={value}
         placeholder="Search groups"
         onChangeText={onChangeText}
@@ -28,7 +29,7 @@ const SearchBar = memo(({ value, onChangeText }: SearchBarProps) => {
 const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
   <Pressable
     key={`group-item-${group.id}`}
-    className="p-4 mb-3 bg-white rounded-lg shadow-sm"
+    className="p-4 mb-3 rounded-lg shadow-sm bg-background-secondary"
     accessibilityLabel={`View group ${group.name}`}
   >
     <View className="flex-row items-center justify-between py-2">
@@ -38,8 +39,8 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
         </View>
       </View>
       <View className="flex-1 ml-4">
-        <Text className="text-base font-medium text-dark">{group.name}</Text>
-        <Text className="text-sm text-gray-500">{group.contacts.length} contacts</Text>
+        <Text className="text-base font-medium text-text-primary">{group.name}</Text>
+        <Text className="text-sm text-text-secondary">{group.contacts.length} contacts</Text>
       </View>
       <View className="flex-row items-center">
         <Pressable
@@ -65,7 +66,7 @@ const GroupItem = memo(({ group, onEdit, onDelete }: GroupItemProps) => (
       </View>
     </View>
     {group.description ? (
-      <Text className="mt-2 text-gray-500 pl-13">{group.description}</Text>
+      <Text className="mt-2 truncate text-text-secondary pl-13">{group.description}</Text>
     ) : null}
   </Pressable>
 ));
@@ -285,8 +286,8 @@ const GroupsScreen = () => {
   return (
     <SafeAreaView className="flex-1 px-4 bg-background-primary" edges={['top', 'left', 'right']}>
       <View>
-        <Text className="text-2xl font-bold bg-white dark:bg-orange-600 text-dark">Groups</Text>
-        <Text className="text-gray-500">Manage your contact groups</Text>
+        <Text className="text-2xl font-bold text-text-primary">Groups</Text>
+        <Text className="text-text-secondary">Manage your contact groups</Text>
       </View>
       <View className="flex-row my-4 ">
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
