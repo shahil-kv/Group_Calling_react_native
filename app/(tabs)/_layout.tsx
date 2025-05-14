@@ -29,7 +29,7 @@ export default function TabLayout() {
           fontSize: 12,
           fontFamily: "InterMedium",
         },
-        lazy: true,
+        // lazy: true,
         tabBarShowLabel: true,
         headerShown: false,
       }}
