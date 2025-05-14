@@ -129,20 +129,20 @@ export default function ActiveCallScreen({ currentContact, onEndCall }: ActiveCa
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-background-primary">
       <View className="flex-1 px-6">
         <View className="items-center justify-center flex-1">
           <Animated.View
             style={{
               transform: [{ scale: pulseAnim }],
             }}
-            className="items-center justify-center w-24 h-24 mb-6 rounded-full bg-primary/10"
+            className="items-center justify-center w-24 h-24 mb-6 rounded-full bg-background-primary"
           >
             <Icon name="user" size={48} color="#1E3A8A" />
           </Animated.View>
 
-          <Text className="mb-2 text-2xl font-bold text-center">{currentContact.name}</Text>
-          <Text className="mb-6 text-lg text-center text-gray-500">
+          <Text className="mb-2 text-2xl font-bold text-center text-text-primary">{currentContact.name}</Text>
+          <Text className="mb-6 text-lg text-center text-text-secondary">
             {currentContact.phoneNumber}
           </Text>
 
@@ -151,15 +151,15 @@ export default function ActiveCallScreen({ currentContact, onEndCall }: ActiveCa
           </View>
 
           {currentCall.status === 'connected' && currentCall.message && (
-            <View className="w-full p-4 mb-8 bg-white rounded-lg">
+            <View className="w-full p-4 mb-8 rounded-lg bg-background-secondary">
               <Text className="mb-2 text-center text-gray-500">Playing message:</Text>
               <Text className="text-center text-dark">{currentCall.message}</Text>
             </View>
           )}
 
-          <View className="w-full p-4 mb-8 bg-white rounded-lg">
-            <Text className="mb-2 text-center text-gray-500">Call Progress</Text>
-            <View className="w-full h-2 mb-2 bg-gray-200 rounded-full">
+          <View className="w-full p-4 mb-8 rounded-lg bg-background-secondary">
+            <Text className="mb-2 text-center text-text-primary">Call Progress</Text>
+            <View className="w-full h-2 mb-2 rounded-full bg-tertiary">
               <View
                 className="h-2 rounded-full bg-primary"
                 style={{
@@ -167,7 +167,7 @@ export default function ActiveCallScreen({ currentContact, onEndCall }: ActiveCa
                 }}
               />
             </View>
-            <Text className="text-center text-gray-500">
+            <Text className="text-center text-text-primary">
               {currentCall.currentIndex + 1} of {currentCall.contacts.length} contacts
             </Text>
             <Text className="mt-2 text-center text-dark">
