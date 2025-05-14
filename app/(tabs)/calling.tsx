@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CallStatus, useCallStore } from '@/stores/callStore';
 import { useContactStore } from '@/stores/contactStore';
 import { useGroupStore } from '@/stores/groupStore';
-import * as Contacts from 'expo-contacts';
+import { ExtendedContact } from '@/types/contact.types';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
@@ -15,17 +15,15 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-type ExpoContact = Contacts.Contact;
-
 interface Group {
   id: string;
   name: string;
-  contacts: Contacts.Contact[];
+  contacts: ExtendedContact[];
 }
 
 // Mock implementation - would be replaced with actual calling libraries
@@ -44,7 +42,7 @@ export default function CallingScreen() {
   const { contacts } = useContactStore();
   const { currentCall, startCall, endCall, moveToNextContact, updateStatus } = useCallStore();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [selectedContacts, setSelectedContacts] = useState<ExpoContact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>([]);
   const [isSelectingContacts, setIsSelectingContacts] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedMessage, setRecordedMessage] = useState('');
@@ -152,7 +150,8 @@ export default function CallingScreen() {
       if (validContacts.length < selectedContacts.length) {
         Alert.alert(
           'Some Contacts Skipped',
-          `${selectedContacts.length - validContacts.length
+          `${
+            selectedContacts.length - validContacts.length
           } contacts were skipped because they don't have valid phone numbers.`
         );
       }
@@ -243,7 +242,7 @@ export default function CallingScreen() {
       const group = groups.find((g: Group) => g.id === groupId);
       if (group) {
         // Convert our Contact type to ExpoContact type
-        const expoContacts: ExpoContact[] = group.contacts.map(contact => ({
+        const expoContacts: ExtendedContact[] = group.contacts.map(contact => ({
           id: contact.id,
           name: contact.name,
           phoneNumbers: [
@@ -258,9 +257,9 @@ export default function CallingScreen() {
     }
   };
 
-  const toggleContactSelection = (contact: ExpoContact) => {
-    if (selectedContacts.some((c: ExpoContact) => c.id === contact.id)) {
-      setSelectedContacts(selectedContacts.filter((c: ExpoContact) => c.id !== contact.id));
+  const toggleContactSelection = (contact: ExtendedContact) => {
+    if (selectedContacts.some((c: ExtendedContact) => c.id === contact.id)) {
+      setSelectedContacts(selectedContacts.filter((c: ExtendedContact) => c.id !== contact.id));
     } else {
       setSelectedContacts([...selectedContacts, contact]);
     }
@@ -351,7 +350,9 @@ export default function CallingScreen() {
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
                     <Text className="font-bold text-white">4</Text>
                   </View>
-                  <Text className="text-text-secondary">App will automatically call each contact</Text>
+                  <Text className="text-text-secondary">
+                    App will automatically call each contact
+                  </Text>
                 </View>
                 <View className="flex-row items-center">
                   <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
@@ -376,8 +377,9 @@ export default function CallingScreen() {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
-                    }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${
+                    selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
+                  }`}
                   onPress={() => handleGroupSelect(null)}
                 >
                   <Text className={selectedGroup === null ? 'text-white' : 'text-text-primary'}>
@@ -388,11 +390,14 @@ export default function CallingScreen() {
                 {groups.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
-                      }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${
+                      selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
+                    }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
-                    <Text className={selectedGroup === group.id ? 'text-white' : 'text-text-secondary'}>
+                    <Text
+                      className={selectedGroup === group.id ? 'text-white' : 'text-text-secondary'}
+                    >
                       {group.name}
                     </Text>
                   </TouchableOpacity>
@@ -405,7 +410,9 @@ export default function CallingScreen() {
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center">
                   <Icon name="address-book" size={20} color="#1E3A8A" />
-                  <Text className="ml-2 text-lg font-bold text-text-primary">Selected Contacts</Text>
+                  <Text className="ml-2 text-lg font-bold text-text-primary">
+                    Selected Contacts
+                  </Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsSelectingContacts(true)}>
                   <Text className="font-medium text-secondary">
@@ -420,7 +427,7 @@ export default function CallingScreen() {
                     {selectedContacts.length} contacts selected
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {selectedContacts.slice(0, 5).map((contact: ExpoContact) => (
+                    {selectedContacts.slice(0, 5).map((contact: ExtendedContact) => (
                       <View key={contact.id} className="items-center mr-4">
                         <View className="items-center justify-center w-12 h-12 mb-1 rounded-full bg-primary">
                           <Icon name="user" size={24} color="#1E3A8A" />
@@ -469,18 +476,21 @@ export default function CallingScreen() {
               </View>
 
               <TouchableOpacity
-                className={`bg-tertiary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error' : ''
-                  } ${!user?.is_premium ? 'opacity-50' : ''}`}
+                className={`bg-tertiary p-4 rounded-lg flex-row items-center justify-between ${
+                  isRecording ? 'bg-error' : ''
+                } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
               >
                 <View className="flex-1">
-                  <Text className={`${isRecording ? 'text-error' : 'text-text-primary'} font-medium`}>
+                  <Text
+                    className={`${isRecording ? 'text-error' : 'text-text-primary'} font-medium`}
+                  >
                     {isRecording
                       ? 'Recording...'
                       : recordedMessage
-                        ? 'Re-record Message'
-                        : 'Record Voice Message'}
+                      ? 'Re-record Message'
+                      : 'Record Voice Message'}
                   </Text>
                   {!user?.is_premium && (
                     <Text className="mt-1 text-sm text-text-secondary">
@@ -500,8 +510,9 @@ export default function CallingScreen() {
 
             {/* Start Calling Button */}
             <TouchableOpacity
-              className={`bg-primary rounded-lg py-2 items-center my-2 ${selectedContacts.length === 0 ? 'opacity-50' : ''
-                }`}
+              className={`bg-primary rounded-lg py-2 items-center my-2 ${
+                selectedContacts.length === 0 ? 'opacity-50' : ''
+              }`}
               onPress={handleStartCall}
               disabled={selectedContacts.length === 0}
             >
@@ -527,13 +538,12 @@ export default function CallingScreen() {
           <View className="flex-1 bg-black/50">
             <View className="flex-1 mt-20 bg-white rounded-t-[32px]">
               <ContactSelector
-                visible={isSelectingContacts}
-                onClose={() => setIsSelectingContacts(false)}
+                onBack={() => setIsSelectingContacts(false)}
                 onDone={(contacts: any) => {
-                  setSelectedContacts(contacts as ExpoContact[]);
+                  setSelectedContacts(contacts as ExtendedContact[]);
                   setIsSelectingContacts(false);
                 }}
-                initialSelectedContacts={selectedContacts as any}
+                initialSelectedContacts={selectedContacts as ExtendedContact[]}
               />
             </View>
           </View>
