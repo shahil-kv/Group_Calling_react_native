@@ -229,7 +229,9 @@ export default function ContactSelector({
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelectedContacts(allContacts);
+    // setSelectedContacts(allContacts);
+    console.log('allContacts', allContacts);
+    // todo need to do the all after the search
   }, [allContacts]);
 
   return (
