@@ -376,11 +376,11 @@ export default function CallingScreen() {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-primary'
+                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-background-secondary'
                     }`}
                   onPress={() => handleGroupSelect(null)}
                 >
-                  <Text className={selectedGroup === null ? 'text-white' : 'text-text-secondary'}>
+                  <Text className={selectedGroup === null ? 'text-white' : 'text-text-primary'}>
                     Custom
                   </Text>
                 </TouchableOpacity>
@@ -388,7 +388,7 @@ export default function CallingScreen() {
                 {groups.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-background-primary'
+                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-background-secondary'
                       }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
@@ -443,7 +443,7 @@ export default function CallingScreen() {
               ) : (
                 <View className="items-center p-4 rounded-lg ">
                   <Icon name="user-plus" size={32} color="#94A3B8" />
-                  <Text className="mt-2 text-center text-text-primary">
+                  <Text className="mt-2 text-center text-text-secondary">
                     No contacts selected. Select a group or add contacts individually.
                   </Text>
                   <TouchableOpacity
@@ -469,13 +469,13 @@ export default function CallingScreen() {
               </View>
 
               <TouchableOpacity
-                className={`bg-background-secondary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
+                className={`bg-background-secondary p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error' : ''
                   } ${!user?.is_premium ? 'opacity-50' : ''}`}
                 onPress={handleRecordMessage}
                 disabled={!user?.is_premium}
               >
                 <View className="flex-1">
-                  <Text className={`${isRecording ? 'text-error' : 'text-text-secondary'} font-medium`}>
+                  <Text className={`${isRecording ? 'text-error' : 'text-text-primary'} font-medium`}>
                     {isRecording
                       ? 'Recording...'
                       : recordedMessage
@@ -483,7 +483,7 @@ export default function CallingScreen() {
                         : 'Record Voice Message'}
                   </Text>
                   {!user?.is_premium && (
-                    <Text className="mt-1 text-sm text-text-tertiary">
+                    <Text className="mt-1 text-sm text-text-secondary">
                       Upgrade to Pro to record voice messages
                     </Text>
                   )}

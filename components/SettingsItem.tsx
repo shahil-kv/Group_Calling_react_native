@@ -24,9 +24,9 @@ const SettingsItem = ({
 }: SettingsItemProps) => {
   const renderContent = () => (
     <View className="flex-row items-center justify-between py-4 border-b border-gray-100">
-      <Text className="font-medium text-gray-800">{label}</Text>
+      <Text className="font-medium text-text-secondary">{label}</Text>
       <View className="flex-row items-center">
-        {value && <Text className="mr-2 text-gray-500">{value}</Text>}
+        {value && <Text className="mr-2 text-text-primary">{value}</Text>}
         {hasToggle && (
           <Switch
             value={toggleValue}

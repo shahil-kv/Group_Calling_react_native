@@ -123,7 +123,7 @@ module.exports = {
           '--color-accent': '#F472B6',           // Pink 400
           '--color-success': '#4ADE80',          // Green 400
           '--color-warning': '#FBBF24',          // Amber 400
-          '--color-error': '#F87171',            // Red 400
+          '--color-error': '#ef4444',            // Red 400
           '--color-info': '#60A5FA',             // Blue 400
           '--color-neutral': '#94A3B8',          // Slate 400
           '--color-background-primary': '#0F172A',       // Slate 900

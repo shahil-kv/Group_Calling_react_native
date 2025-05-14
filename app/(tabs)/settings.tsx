@@ -6,10 +6,9 @@ import {
   Modal,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
@@ -68,15 +67,14 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="default" backgroundColor="#ffffff" />
+    <SafeAreaView className="flex-1 bg-background-primary">
       <ScrollView className="flex-1">
-        <View className="flex-1 px-4">
+        <View className="flex-1 px-4 ">
           <Header title="Settings" subtitle="Manage your account and preferences" />
 
           {/* Account Section */}
-          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
-            <Text className="mb-4 text-lg font-semibold">Account</Text>
+          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+            <Text className="mb-4 text-lg font-semibold text-text-secondary">Account</Text>
 
             <SettingsItem label="Email" value="user@example.com" showArrow={false} />
 
@@ -91,8 +89,8 @@ export default function SettingsScreen() {
           </View>
 
           {/* Notifications Section */}
-          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
-            <Text className="mb-4 text-lg font-semibold">Notifications</Text>
+          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+            <Text className="mb-4 text-lg font-semibold text-text-secondary">Notifications</Text>
 
             <SettingsItem
               label="Push Notifications"
@@ -104,8 +102,8 @@ export default function SettingsScreen() {
           </View>
 
           {/* Legal Section */}
-          <View className="p-5 mb-6 bg-white shadow-sm rounded-xl">
-            <Text className="mb-4 text-lg font-semibold">Legal</Text>
+          <View className="p-5 mb-6 shadow-sm bg-tertiary rounded-xl">
+            <Text className="mb-4 text-lg font-semibold text-text-secondary">Legal</Text>
 
             <SettingsItem label="Privacy Policy" onClick={handlePrivacyPolicy} showArrow={true} />
 
@@ -114,7 +112,7 @@ export default function SettingsScreen() {
 
           {/* Logout Button */}
           <TouchableOpacity
-            className="items-center w-full py-4 mb-8 bg-red-500 rounded-lg"
+            className="items-center w-full py-4 mb-8 rounded-lg bg-error"
             onPress={handleLogout}
           >
             <Text className="font-medium text-white">Log Out</Text>

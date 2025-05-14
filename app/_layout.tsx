@@ -8,10 +8,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { configureReanimatedLogger } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LoaderProvider } from '../contexts/LoaderContext';
 import '../global.css';
+configureReanimatedLogger({ strict: false });
 
 declare global {
   var window: {
