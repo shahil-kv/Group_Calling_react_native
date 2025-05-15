@@ -244,14 +244,14 @@ export default function CreateGroupModal({
     return (
       <View className="flex-row items-center justify-between px-4 py-3">
         <View className="flex-row items-center flex-1">
-          <View className="items-center justify-center w-10 h-10 mr-3 bg-gray-100 rounded-full">
+          <View className="items-center justify-center w-10 h-10 mr-3 rounded-full bg-tertiary">
             <Text className="text-base font-medium text-gray-600">{initials}</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
+            <Text className="text-base font-medium text-text-primary" numberOfLines={1}>
               {displayName}
             </Text>
-            <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
+            <Text className="mt-1 text-sm text-text-secondary" numberOfLines={1}>
               {phoneNumber}
             </Text>
           </View>
@@ -263,7 +263,7 @@ export default function CreateGroupModal({
   const ImportedContactsFooter = useCallback(
     () => (
       <View
-        className="pt-4 bg-white border-t border-gray-200"
+        className="pt-4 border-t border-gray-200 bg-background-secondary"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -274,7 +274,7 @@ export default function CreateGroupModal({
         }}
       >
         <TouchableOpacity
-          className="items-center py-4 bg-blue-600 rounded-xl"
+          className="items-center py-4 bg-primary rounded-xl"
           onPress={() => setShowImportedContacts(false)}
           accessibilityLabel="Done viewing imported contacts"
         >
@@ -309,7 +309,7 @@ export default function CreateGroupModal({
       propagateSwipe
     >
       <SafeAreaView
-        className="bg-white shadow-lg rounded-t-3xl"
+        className="shadow-lg bg-background-secondary rounded-t-3xl"
         style={{ height: showImportedContacts || showContactSelection ? '93%' : '65%' }}
       >
         {isModalReady ? (
@@ -328,9 +328,9 @@ export default function CreateGroupModal({
                       onPress={() => setShowImportedContacts(false)}
                       accessibilityLabel="Back to group form"
                     >
-                      <Icon name="arrow-left" size={20} color="#.specify color" />
+                      <Icon name="arrow-left" size={20} color="#64748b" />
                     </TouchableOpacity>
-                    <Text className="text-2xl font-bold text-gray-900">Imported Contacts</Text>
+                    <Text className="text-2xl font-bold text-text-primary">Imported Contacts</Text>
                     <TouchableOpacity onPress={onClose} accessibilityLabel="Close modal">
                       <Icon name="close" size={20} color="#64748b" />
                     </TouchableOpacity>
@@ -338,7 +338,7 @@ export default function CreateGroupModal({
                   {importedContacts.length === 0 ? (
                     <View className="items-center justify-center flex-1">
                       <Icon name="file-excel-o" size={24} color="#94a3b8" />
-                      <Text className="mt-3 text-base text-gray-500">No imported contacts</Text>
+                      <Text className="mt-3 text-base text-text-primary">No imported contacts</Text>
                     </View>
                   ) : (
                     <View className="flex-1">
@@ -362,7 +362,7 @@ export default function CreateGroupModal({
             ) : (
               <View className="flex-1 p-5">
                 <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-2xl font-bold text-text-primary">
                     {isEditing ? 'Edit Group' : 'Create New Group'}
                   </Text>
                   <TouchableOpacity onPress={onClose} accessibilityLabel="Close modal">
@@ -372,9 +372,9 @@ export default function CreateGroupModal({
                 <View className="flex-1 mb-4">
                   <View className="space-y-5">
                     <View>
-                      <Text className="mb-2 font-medium text-gray-700">Group Name</Text>
+                      <Text className="mb-2 font-medium text-text-secondary">Group Name</Text>
                       <TextInput
-                        className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                        className="px-4 py-3.5 bg-background-primary border border-gray-200 rounded-xl text-text-primary"
                         placeholder="Enter group name"
                         placeholderTextColor="#64748b"
                         value={groupName}
@@ -383,9 +383,9 @@ export default function CreateGroupModal({
                       />
                     </View>
                     <View>
-                      <Text className="mb-2 font-medium text-gray-700">Description (Optional)</Text>
+                      <Text className="my-2 font-medium text-text-secondary">Description (Optional)</Text>
                       <TextInput
-                        className="px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                        className="px-4 py-3.5 border border-gray-200 rounded-xl bg-background-primary text-text-primary"
                         placeholder="Enter description"
                         placeholderTextColor="#64748b"
                         value={description}
@@ -397,17 +397,17 @@ export default function CreateGroupModal({
                       />
                     </View>
                     <View>
-                      <Text className="mb-2 font-medium text-gray-700">Add Contacts</Text>
+                      <Text className="my-2 font-medium text-text-secondary">Add Contacts</Text>
                       <TouchableOpacity
-                        className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl"
+                        className="flex-row items-center justify-between px-4 py-3.5 bg-background-primary border border-gray-200 rounded-xl"
                         onPress={() => setShowContactSelection(true)}
                         accessibilityLabel="Select contacts"
                       >
                         <Text
                           className={
                             selectedContacts.filter(c => c.isContactFromDevice).length > 0
-                              ? 'text-gray-900'
-                              : 'text-gray-400'
+                              ? 'text-text-primary'
+                              : 'text-text-secondary'
                           }
                         >
                           {selectedContacts.filter(c => c.isContactFromDevice).length > 0
@@ -418,7 +418,7 @@ export default function CreateGroupModal({
                         <Icon name="chevron-right" size={16} color="#64748b" />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        className="flex-row items-center justify-between px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl mt-3"
+                        className="flex-row items-center justify-between px-4 py-3.5 bg-background-primary border border-gray-200 rounded-xl mt-3"
                         onPress={() =>
                           importedContacts.length > 0
                             ? setShowImportedContacts(true)
@@ -438,7 +438,7 @@ export default function CreateGroupModal({
                             color="#64748b"
                             style={{ marginRight: 12 }}
                           />
-                          <Text className="text-gray-900">
+                          <Text className="text-text-primary">
                             {isImporting
                               ? 'Importing...'
                               : importedContacts.length > 0
@@ -462,7 +462,7 @@ export default function CreateGroupModal({
                     </View>
                   </View>
                 </View>
-                <View className="pt-4 border-t border-gray-200">
+                <View className="pt-4">
                   <TouchableOpacity
                     className="items-center py-4 bg-blue-600 rounded-xl"
                     onPress={handleSave}
@@ -482,6 +482,6 @@ export default function CreateGroupModal({
           </View>
         )}
       </SafeAreaView>
-    </Modal>
+    </Modal >
   );
 }
