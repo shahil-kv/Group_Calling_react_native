@@ -10,7 +10,9 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Animated,
+  Linking,
   Modal,
+  PermissionsAndroid,
   Platform,
   ScrollView,
   StatusBar,
@@ -49,8 +51,6 @@ export default function CallingScreen() {
   const [recordedMessage, setRecordedMessage] = useState('');
   const [showTutorial, setShowTutorial] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [searchQuery, setSearchQuery] = useState('');
-
   const isCallActive = currentCall.status !== 'idle';
   const currentContact = isCallActive && currentCall.contacts[currentCall.currentIndex];
 
@@ -62,181 +62,186 @@ export default function CallingScreen() {
     }).start();
   }, []);
 
-  const requestCallPermissions = async (): Promise<boolean> => {
+  const requestCallPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        console.log('Starting permission request process...');
+
+        // First check if we already have the permissions
+        const hasCallPermission = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.CALL_PHONE
+        );
+        const hasRecordPermission = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+        );
+
+        console.log('Initial permission check:', {
+          hasCallPermission,
+          hasRecordPermission,
+        });
+
+        // If we already have both permissions, return true
+        if (hasCallPermission && hasRecordPermission) {
+          console.log('All permissions already granted');
+          return true;
+        }
+
+        // Show specific alert based on which permissions are missing
+        if (!hasCallPermission || !hasRecordPermission) {
+          const missingPermissions: string[] = [];
+          if (!hasCallPermission) missingPermissions.push('Call');
+          if (!hasRecordPermission) missingPermissions.push('Recording');
+
+          const showPartialPermissionAlert = () => {
+            return new Promise<boolean>(resolve => {
+              console.log(missingPermissions);
+
+              Alert.alert(
+                'Additional Permissions Required',
+                `This app needs ${missingPermissions.join(' and ')} permission${
+                  missingPermissions.length > 1 ? 's' : ''
+                } to work properly. Would you like to grant ${
+                  missingPermissions.length > 1 ? 'them' : 'it'
+                } now?`,
+                [
+                  {
+                    text: 'Not Now',
+                    style: 'cancel',
+                    onPress: () => {
+                      console.log('User declined to grant permissions');
+                      resolve(false);
+                    },
+                  },
+                  {
+                    text: 'Grant Permission' + (missingPermissions.length > 1 ? 's' : ''),
+                    onPress: async () => {
+                      try {
+                        // Request only the missing permissions
+                        const permissionsToRequest: (typeof PermissionsAndroid.PERMISSIONS.CALL_PHONE)[] =
+                          [];
+                        if (!hasCallPermission) {
+                          permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
+                        }
+                        if (!hasRecordPermission) {
+                          permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+                        }
+
+                        console.log('Requesting permissions:', permissionsToRequest);
+
+                        // Request permissions one by one to ensure proper handling
+                        for (const permission of permissionsToRequest) {
+                          console.log(`Requesting permission: ${permission}`);
+                          const result = await PermissionsAndroid.request(permission);
+                          console.log('result', result);
+
+                          console.log(`Permission result for ${permission}:`, result);
+
+                          if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+                            console.log(`Permission denied for ${permission}`);
+                            Alert.alert(
+                              'Permission Required',
+                              `Please grant ${
+                                permission === PermissionsAndroid.PERMISSIONS.CALL_PHONE
+                                  ? 'Call'
+                                  : 'Recording'
+                              } permission to continue.`,
+                              [
+                                {
+                                  text: 'Open Settings',
+                                  onPress: () => {
+                                    if (Platform.OS === 'android') {
+                                      Linking.openSettings();
+                                    }
+                                    resolve(false);
+                                  },
+                                },
+                                {
+                                  text: 'Cancel',
+                                  style: 'cancel',
+                                  onPress: () => resolve(false),
+                                },
+                              ]
+                            );
+                            return;
+                          }
+                        }
+
+                        // Verify all permissions were granted
+                        const verifyCallPermission = await PermissionsAndroid.check(
+                          PermissionsAndroid.PERMISSIONS.CALL_PHONE
+                        );
+                        const verifyRecordPermission = await PermissionsAndroid.check(
+                          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+                        );
+
+                        console.log('Final permission verification:', {
+                          verifyCallPermission,
+                          verifyRecordPermission,
+                        });
+
+                        if (verifyCallPermission && verifyRecordPermission) {
+                          console.log('All permissions successfully granted');
+                          resolve(true);
+                        } else {
+                          console.log('Permission verification failed');
+                          Alert.alert(
+                            'Permission Error',
+                            'Failed to verify permissions. Please try again or check your device settings.',
+                            [
+                              {
+                                text: 'Try Again',
+                                onPress: () => resolve(false),
+                              },
+                              {
+                                text: 'Cancel',
+                                style: 'cancel',
+                                onPress: () => resolve(false),
+                              },
+                            ]
+                          );
+                        }
+                      } catch (error) {
+                        console.error('Error in permission request:', error);
+                        Alert.alert(
+                          'Permission Error',
+                          'There was an error requesting permissions. Please try again.',
+                          [
+                            {
+                              text: 'Try Again',
+                              onPress: () => resolve(false),
+                            },
+                            {
+                              text: 'Cancel',
+                              style: 'cancel',
+                              onPress: () => resolve(false),
+                            },
+                          ]
+                        );
+                      }
+                    },
+                  },
+                ]
+              );
+            });
+          };
+
+          const permissionGranted = await showPartialPermissionAlert();
+          console.log('Permission request final result:', permissionGranted);
+          return permissionGranted;
+        }
+
+        return false;
+      } catch (err) {
+        console.error('Error in permission handling:', err);
+        Alert.alert(
+          'Permission Error',
+          'There was an error handling permissions. Please try again or check your device settings.'
+        );
+        return false;
+      }
+    }
     return true; // For non-Android platforms
   };
-
-  // const requestCallPermissions = async () => {
-  //   if (Platform.OS === 'android') {
-  //     try {
-  //       console.log('Starting permission request process...');
-
-  //       // First check if we already have the permissions
-  //       const hasCallPermission = await PermissionsAndroid.check(
-  //         PermissionsAndroid.PERMISSIONS.CALL_PHONE
-  //       );
-  //       const hasRecordPermission = await PermissionsAndroid.check(
-  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-  //       );
-
-  //       console.log('Initial permission check:', {
-  //         hasCallPermission,
-  //         hasRecordPermission
-  //       });
-
-  //       // If we already have both permissions, return true
-  //       if (hasCallPermission && hasRecordPermission) {
-  //         console.log('All permissions already granted');
-  //         return true;
-  //       }
-
-  //       // Show specific alert based on which permissions are missing
-  //       if (!hasCallPermission || !hasRecordPermission) {
-  //         const missingPermissions: string[] = [];
-  //         if (!hasCallPermission) missingPermissions.push('Call');
-  //         if (!hasRecordPermission) missingPermissions.push('Recording');
-
-  //         const showPartialPermissionAlert = () => {
-  //           return new Promise<boolean>((resolve) => {
-  //             console.log(missingPermissions);
-
-  //             Alert.alert(
-  //               'Additional Permissions Required',
-  //               `This app needs ${missingPermissions.join(' and ')} permission${missingPermissions.length > 1 ? 's' : ''} to work properly. Would you like to grant ${missingPermissions.length > 1 ? 'them' : 'it'} now?`,
-  //               [
-  //                 {
-  //                   text: 'Not Now',
-  //                   style: 'cancel',
-  //                   onPress: () => {
-  //                     console.log('User declined to grant permissions');
-  //                     resolve(false);
-  //                   }
-  //                 },
-  //                 {
-  //                   text: 'Grant Permission' + (missingPermissions.length > 1 ? 's' : ''),
-  //                   onPress: async () => {
-  //                     try {
-  //                       // Request only the missing permissions
-  //                       const permissionsToRequest: (typeof PermissionsAndroid.PERMISSIONS.CALL_PHONE)[] = [];
-  //                       if (!hasCallPermission) {
-  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
-  //                       }
-  //                       if (!hasRecordPermission) {
-  //                         permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
-  //                       }
-
-  //                       console.log('Requesting permissions:', permissionsToRequest);
-
-  //                       // Request permissions one by one to ensure proper handling
-  //                       for (const permission of permissionsToRequest) {
-  //                         console.log(`Requesting permission: ${permission}`);
-  //                         const result = await PermissionsAndroid.request(permission);
-  //                         console.log('result', result);
-
-  //                         console.log(`Permission result for ${permission}:`, result);
-
-  //                         if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-  //                           console.log(`Permission denied for ${permission}`);
-  //                           Alert.alert(
-  //                             'Permission Required',
-  //                             `Please grant ${permission === PermissionsAndroid.PERMISSIONS.CALL_PHONE ? 'Call' : 'Recording'} permission to continue.`,
-  //                             [
-  //                               {
-  //                                 text: 'Open Settings',
-  //                                 onPress: () => {
-  //                                   if (Platform.OS === 'android') {
-  //                                     Linking.openSettings();
-  //                                   }
-  //                                   resolve(false);
-  //                                 }
-  //                               },
-  //                               {
-  //                                 text: 'Cancel',
-  //                                 style: 'cancel',
-  //                                 onPress: () => resolve(false)
-  //                               }
-  //                             ]
-  //                           );
-  //                           return;
-  //                         }
-  //                       }
-
-  //                       // Verify all permissions were granted
-  //                       const verifyCallPermission = await PermissionsAndroid.check(
-  //                         PermissionsAndroid.PERMISSIONS.CALL_PHONE
-  //                       );
-  //                       const verifyRecordPermission = await PermissionsAndroid.check(
-  //                         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-  //                       );
-
-  //                       console.log('Final permission verification:', {
-  //                         verifyCallPermission,
-  //                         verifyRecordPermission
-  //                       });
-
-  //                       if (verifyCallPermission && verifyRecordPermission) {
-  //                         console.log('All permissions successfully granted');
-  //                         resolve(true);
-  //                       } else {
-  //                         console.log('Permission verification failed');
-  //                         Alert.alert(
-  //                           'Permission Error',
-  //                           'Failed to verify permissions. Please try again or check your device settings.',
-  //                           [
-  //                             {
-  //                               text: 'Try Again',
-  //                               onPress: () => resolve(false)
-  //                             },
-  //                             {
-  //                               text: 'Cancel',
-  //                               style: 'cancel',
-  //                               onPress: () => resolve(false)
-  //                             }
-  //                           ]
-  //                         );
-  //                       }
-  //                     } catch (error) {
-  //                       console.error('Error in permission request:', error);
-  //                       Alert.alert(
-  //                         'Permission Error',
-  //                         'There was an error requesting permissions. Please try again.',
-  //                         [
-  //                           {
-  //                             text: 'Try Again',
-  //                             onPress: () => resolve(false)
-  //                           },
-  //                           {
-  //                             text: 'Cancel',
-  //                             style: 'cancel',
-  //                             onPress: () => resolve(false)
-  //                           }
-  //                         ]
-  //                       );
-  //                     }
-  //                   }
-  //                 }
-  //               ]
-  //             );
-  //           });
-  //         };
-
-  //         const permissionGranted = await showPartialPermissionAlert();
-  //         console.log('Permission request final result:', permissionGranted);
-  //         return permissionGranted;
-  //       }
-
-  //       return false;
-  //     } catch (err) {
-  //       console.error('Error in permission handling:', err);
-  //       Alert.alert(
-  //         'Permission Error',
-  //         'There was an error handling permissions. Please try again or check your device settings.'
-  //       );
-  //       return false;
-  //     }
-  //   }
-  //   return true; // For non-Android platforms
-  // };
 
   const confirmSequentialCalls = () => {
     return new Promise(resolve => {
