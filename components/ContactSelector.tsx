@@ -45,7 +45,7 @@ const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps)
 
   return (
     <TouchableOpacity
-      className={`flex-row items-center justify-between py-3 px-4 ${isSelected ? 'bg-blue-50' : 'bg-transparent'
+      className={`flex-row items-center justify-between py-3 px-4 ${isSelected ? 'bg-primary' : 'bg-transparent'
         }`}
       onPress={() => toggleContact(item)}
       accessibilityLabel={`Select contact ${displayName}`}
@@ -55,10 +55,10 @@ const ContactItem = memo(({ item, isSelected, toggleContact }: ContactItemProps)
           <Text className="text-base font-medium text-gray-600">{initials}</Text>
         </View>
         <View className="flex-1">
-          <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
+          <Text className={`text-base font-medium ${isSelected ? 'text-white' : 'text-text-primary'}`} numberOfLines={1}>
             {displayName}
           </Text>
-          <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
+          <Text className={`mt-1 text-sm ${isSelected ? 'text-white' : 'text-text-primary'}`} numberOfLines={1}>
             {phoneNumber}
           </Text>
         </View>
@@ -237,10 +237,10 @@ export default function ContactSelector({
         <TouchableOpacity onPress={onBack} accessibilityLabel="Back to group form">
           <Icon name="arrow-left" size={20} color="#64748b" />
         </TouchableOpacity>
-        <Text className="text-2xl font-bold text-gray-900">Select Contacts</Text>
+        <Text className="text-2xl font-bold text-text-primary">Select Contacts</Text>
         <View style={{ width: 20 }} />
       </View>
-      <View className="flex-row items-center px-3 py-2 mb-4 bg-gray-100 rounded-2xl">
+      <View className="flex-row items-center px-3 py-2 mb-4 bg-background-primary rounded-2xl">
         <Icon name="search" size={16} color="#64748b" />
         <TextInput
           className="flex-1 ml-2 text-base"
@@ -252,37 +252,37 @@ export default function ContactSelector({
         />
       </View>
       <View className="flex-row items-center justify-between py-2">
-        <Text className="text-xs font-medium text-gray-500">
+        <Text className="text-xs font-medium text-text-secondary">
           {selectedContacts.length} contacts selected
         </Text>
         <View className="flex-row gap-2">
           {selectedContacts.length > 0 && (
             <TouchableOpacity
               onPress={clearSelection}
-              className="px-3.5 py-2 bg-gray-100 rounded-full"
+              className="px-3.5 py-2 bg-background-primary rounded-full"
               accessibilityLabel="Clear all selected contacts"
             >
-              <Text className="text-xs font-medium text-gray-600">Clear all</Text>
+              <Text className="text-xs font-medium text-text-primary">Clear all</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={selectAll}
-            className="px-3.5 py-2 bg-gray-100 rounded-full"
+            className="px-3.5 py-2 bg-background-primary rounded-full"
             accessibilityLabel="Select all contacts"
           >
-            <Text className="text-xs font-medium text-gray-600">Select all</Text>
+            <Text className="text-xs font-medium text-text-primary">Select all</Text>
           </TouchableOpacity>
         </View>
       </View>
       {isLoading ? (
         <View className="items-center justify-center flex-1">
           <ActivityIndicator size="large" color="#1E3A8A" />
-          <Text className="mt-3 text-base text-gray-500">Loading contacts...</Text>
+          <Text className="mt-3 text-base text-text-primary">Loading contacts...</Text>
         </View>
       ) : filteredContacts.length === 0 ? (
         <View className="items-center justify-center flex-1">
           <Icon name="search" size={24} color="#94a3b8" />
-          <Text className="mt-3 text-base text-gray-500">No contacts found</Text>
+          <Text className="mt-3 text-base text-text-primary">No contacts found</Text>
         </View>
       ) : (
         <View className="flex-1">
@@ -304,7 +304,7 @@ export default function ContactSelector({
                   {isLoadingMore ? (
                     <ActivityIndicator size="small" color="#1E3A8A" />
                   ) : (
-                    <Text className="text-sm text-gray-500">Scroll to load more...</Text>
+                    <Text className="text-sm text-text-primary">Scroll to load more...</Text>
                   )}
                 </View>
               ) : null
@@ -318,7 +318,7 @@ export default function ContactSelector({
         </View>
       )}
       <View
-        className="pt-4 bg-white border-t border-gray-200"
+        className="pt-4 border-t border-gray-200 bg-background-secondary"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -329,7 +329,7 @@ export default function ContactSelector({
         }}
       >
         <TouchableOpacity
-          className="items-center py-4 bg-blue-600 rounded-xl"
+          className="items-center py-4 bg-primary rounded-xl"
           onPress={() => onDone(selectedContacts)}
           accessibilityLabel="Done selecting contacts"
         >
