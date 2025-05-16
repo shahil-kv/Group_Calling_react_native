@@ -1,19 +1,14 @@
 import ActiveCallScreen from '@/components/ActiveCallScreen';
 import ContactSelector from '@/components/ContactSelector';
 import { useAuth } from '@/contexts/AuthContext';
-import { CallStatus, useCallStore } from '@/stores/callStore';
-import { useContactStore } from '@/stores/contactStore';
-import { useGroupStore } from '@/stores/groupStore';
+import { useGet, usePost } from '@/hooks/useApi';
 import { ExtendedContact } from '@/types/contact.types';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Animated,
-  Linking,
   Modal,
-  PermissionsAndroid,
-  Platform,
   ScrollView,
   StatusBar,
   Text,
@@ -22,28 +17,44 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
-interface Group {
-  id: string;
+// Define the contact structure as per the API response
+interface ApiContact {
+  id: number;
+  group_id: number;
+  contact_id: string | null;
   name: string;
-  contacts: ExtendedContact[];
+  first_name: string | null;
+  last_name: string | null;
+  phone_number: string;
+  country_code: string | null;
+  raw_contact: any;
+  created_at: string;
+  updated_at: string;
+  is_contact_from_device: boolean;
 }
 
-// Mock implementation - would be replaced with actual calling libraries
-const mockInitiateCall = (phoneNumber: string): Promise<void> => {
-  return new Promise(resolve => {
-    // Simulate API call or native module
-    setTimeout(() => {
-      console.log(`Initiating call to ${phoneNumber}`);
-      resolve();
-    }, 500);
-  });
-};
+interface Group {
+  id: string; // Changed from group_id to match API response
+  name: string;
+  contacts: ApiContact[];
+  group_type: 'MANUAL' | 'USER_DEFINED';
+  group_name: string;
+}
+
+interface CallState {
+  status: 'idle' | 'in_progress' | 'completed' | 'stopped';
+  contacts: Array<{ id: string; name: string; phoneNumber: string }>;
+  currentIndex: number;
+  sessionId: number | null;
+}
+
+type CallStatus = 'idle' | 'in_progress' | 'completed' | 'stopped';
+
 export default function CallingScreen() {
   const { user } = useAuth();
-  const { groups } = useGroupStore();
-  const { contacts } = useContactStore();
-  const { currentCall, startCall, endCall, moveToNextContact, updateStatus } = useCallStore();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>([]);
   const [isSelectingContacts, setIsSelectingContacts] = useState(false);
@@ -51,197 +62,142 @@ export default function CallingScreen() {
   const [recordedMessage, setRecordedMessage] = useState('');
   const [showTutorial, setShowTutorial] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [pulseAnim] = useState(new Animated.Value(1));
+  const [currentCall, setCurrentCall] = useState<CallState>({
+    status: 'idle',
+    contacts: [],
+    currentIndex: 0,
+    sessionId: null,
+  });
+  const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
+  const [filteredGroups, setFilteredGroups] = useState<Group[]>([]);
+
+  const API_URL = 'https://6811-103-165-167-98.ngrok-free.app';
   const isCallActive = currentCall.status !== 'idle';
   const currentContact = isCallActive && currentCall.contacts[currentCall.currentIndex];
 
+  // Fetch groups using useGet
+  const {
+    data: fetchedGroups,
+    refetch: fetchGroups,
+    isFetching: isFetchingGroups,
+  } = useGet<any, { userId: string | undefined }>(
+    '/group/get-groups',
+    { userId: stableUserId },
+    {
+      showErrorToast: true,
+      showSuccessToast: false,
+      showLoader: false,
+    }
+  );
+
+  // API hooks
+  const { mutateAsync: StartCallSession } = usePost('/call/call_list', {
+    invalidateQueriesOnSuccess: ['/group/get-groups'],
+    showErrorToast: true,
+    showSuccessToast: true,
+    showLoader: true,
+  });
+
+  // Filter out MANUAL groups when fetchedGroups changes
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    if (fetchedGroups?.data && Array.isArray(fetchedGroups.data)) {
+      const nonManualGroups = fetchedGroups.data
+        .filter((group: any) => group.group_type !== 'MANUAL')
+        .map((group: any) => ({
+          ...group,
+          id: String(group.id), // Use group.id instead of group.group_id
+          name: group.group_name,
+        }));
+      setFilteredGroups(nonManualGroups);
+    } else {
+      setFilteredGroups([]);
+    }
+  }, [fetchedGroups]);
+
+  // Initialize Socket.IO connection with proper typing
+  const [socket, setSocket] = useState<Socket | null>(null);
+  useEffect(() => {
+    const socketInstance: Socket = io(API_URL, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socketInstance.on('connect', () => {
+      console.log('Socket.IO connected');
+    });
+
+    socketInstance.on('connect_error', error => {
+      console.error('Socket.IO connection error:', error);
+    });
+
+    setSocket(socketInstance);
+
+    return () => {
+      socketInstance.disconnect();
+    };
   }, []);
 
-  const requestCallPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        console.log('Starting permission request process...');
+  // Listen for call status updates via Socket.IO with typed data
+  useEffect(() => {
+    if (!socket || !currentCall.sessionId) return;
 
-        // First check if we already have the permissions
-        const hasCallPermission = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.CALL_PHONE
-        );
-        const hasRecordPermission = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-        );
+    socket.on(
+      'callStatusUpdate',
+      (data: {
+        sessionId: number;
+        status: CallStatus;
+        currentIndex: number;
+        totalCalls: number;
+      }) => {
+        if (data.sessionId !== currentCall.sessionId) return;
 
-        console.log('Initial permission check:', {
-          hasCallPermission,
-          hasRecordPermission,
-        });
+        const { status, currentIndex, totalCalls } = data;
+        setCurrentCall(prev => ({
+          ...prev,
+          status,
+          currentIndex: currentIndex || prev.currentIndex,
+        }));
 
-        // If we already have both permissions, return true
-        if (hasCallPermission && hasRecordPermission) {
-          console.log('All permissions already granted');
-          return true;
+        if (currentIndex >= totalCalls - 1 || status === 'completed' || status === 'stopped') {
+          setCurrentCall(prev => ({
+            ...prev,
+            status: 'completed',
+          }));
         }
-
-        // Show specific alert based on which permissions are missing
-        if (!hasCallPermission || !hasRecordPermission) {
-          const missingPermissions: string[] = [];
-          if (!hasCallPermission) missingPermissions.push('Call');
-          if (!hasRecordPermission) missingPermissions.push('Recording');
-
-          const showPartialPermissionAlert = () => {
-            return new Promise<boolean>(resolve => {
-              console.log(missingPermissions);
-
-              Alert.alert(
-                'Additional Permissions Required',
-                `This app needs ${missingPermissions.join(' and ')} permission${
-                  missingPermissions.length > 1 ? 's' : ''
-                } to work properly. Would you like to grant ${
-                  missingPermissions.length > 1 ? 'them' : 'it'
-                } now?`,
-                [
-                  {
-                    text: 'Not Now',
-                    style: 'cancel',
-                    onPress: () => {
-                      console.log('User declined to grant permissions');
-                      resolve(false);
-                    },
-                  },
-                  {
-                    text: 'Grant Permission' + (missingPermissions.length > 1 ? 's' : ''),
-                    onPress: async () => {
-                      try {
-                        // Request only the missing permissions
-                        const permissionsToRequest: (typeof PermissionsAndroid.PERMISSIONS.CALL_PHONE)[] =
-                          [];
-                        if (!hasCallPermission) {
-                          permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
-                        }
-                        if (!hasRecordPermission) {
-                          permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
-                        }
-
-                        console.log('Requesting permissions:', permissionsToRequest);
-
-                        // Request permissions one by one to ensure proper handling
-                        for (const permission of permissionsToRequest) {
-                          console.log(`Requesting permission: ${permission}`);
-                          const result = await PermissionsAndroid.request(permission);
-                          console.log('result', result);
-
-                          console.log(`Permission result for ${permission}:`, result);
-
-                          if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-                            console.log(`Permission denied for ${permission}`);
-                            Alert.alert(
-                              'Permission Required',
-                              `Please grant ${
-                                permission === PermissionsAndroid.PERMISSIONS.CALL_PHONE
-                                  ? 'Call'
-                                  : 'Recording'
-                              } permission to continue.`,
-                              [
-                                {
-                                  text: 'Open Settings',
-                                  onPress: () => {
-                                    if (Platform.OS === 'android') {
-                                      Linking.openSettings();
-                                    }
-                                    resolve(false);
-                                  },
-                                },
-                                {
-                                  text: 'Cancel',
-                                  style: 'cancel',
-                                  onPress: () => resolve(false),
-                                },
-                              ]
-                            );
-                            return;
-                          }
-                        }
-
-                        // Verify all permissions were granted
-                        const verifyCallPermission = await PermissionsAndroid.check(
-                          PermissionsAndroid.PERMISSIONS.CALL_PHONE
-                        );
-                        const verifyRecordPermission = await PermissionsAndroid.check(
-                          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-                        );
-
-                        console.log('Final permission verification:', {
-                          verifyCallPermission,
-                          verifyRecordPermission,
-                        });
-
-                        if (verifyCallPermission && verifyRecordPermission) {
-                          console.log('All permissions successfully granted');
-                          resolve(true);
-                        } else {
-                          console.log('Permission verification failed');
-                          Alert.alert(
-                            'Permission Error',
-                            'Failed to verify permissions. Please try again or check your device settings.',
-                            [
-                              {
-                                text: 'Try Again',
-                                onPress: () => resolve(false),
-                              },
-                              {
-                                text: 'Cancel',
-                                style: 'cancel',
-                                onPress: () => resolve(false),
-                              },
-                            ]
-                          );
-                        }
-                      } catch (error) {
-                        console.error('Error in permission request:', error);
-                        Alert.alert(
-                          'Permission Error',
-                          'There was an error requesting permissions. Please try again.',
-                          [
-                            {
-                              text: 'Try Again',
-                              onPress: () => resolve(false),
-                            },
-                            {
-                              text: 'Cancel',
-                              style: 'cancel',
-                              onPress: () => resolve(false),
-                            },
-                          ]
-                        );
-                      }
-                    },
-                  },
-                ]
-              );
-            });
-          };
-
-          const permissionGranted = await showPartialPermissionAlert();
-          console.log('Permission request final result:', permissionGranted);
-          return permissionGranted;
-        }
-
-        return false;
-      } catch (err) {
-        console.error('Error in permission handling:', err);
-        Alert.alert(
-          'Permission Error',
-          'There was an error handling permissions. Please try again or check your device settings.'
-        );
-        return false;
       }
-    }
-    return true; // For non-Android platforms
-  };
+    );
+
+    return () => {
+      socket.off('callStatusUpdate');
+    };
+  }, [socket, currentCall.sessionId]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]).start();
+  }, []);
 
   const confirmSequentialCalls = () => {
     return new Promise(resolve => {
@@ -249,16 +205,8 @@ export default function CallingScreen() {
         'Start Sequential Calls',
         `This will automatically call ${selectedContacts.length} contacts in sequence. The app will automatically proceed to the next contact after each call ends. You can stop at any time by pressing "End Call Session".`,
         [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => resolve(false),
-          },
-          {
-            text: 'Start Calling',
-            style: 'default',
-            onPress: () => resolve(true),
-          },
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Start Calling', style: 'default', onPress: () => resolve(true) },
         ]
       );
     });
@@ -266,13 +214,11 @@ export default function CallingScreen() {
 
   const handleStartCall = async () => {
     try {
-      // 1. Validate contact selection
       if (selectedContacts.length === 0) {
         Alert.alert('No Contacts Selected', 'Please select at least one contact to call.');
         return;
       }
 
-      // 2. Check premium limits
       const contactLimit = user?.is_premium ? 500 : 50;
       if (selectedContacts.length > contactLimit) {
         Alert.alert(
@@ -282,42 +228,18 @@ export default function CallingScreen() {
         return;
       }
 
-      // 3. Request and validate permissions
-      console.log('Requesting permissions before starting call...');
-      const hasPermission = await requestCallPermissions();
-      console.log('Permission result:', hasPermission);
-
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Required',
-          'Please grant call and recording permissions to use this feature.'
-        );
-        return;
-      }
-
-      // 4. Get user confirmation
       const confirmed = await confirmSequentialCalls();
-      if (!confirmed) {
-        return;
-      }
+      if (!confirmed) return;
 
-      // 5. Validate and convert contacts
-      console.log('Converting contacts...');
       const validContacts = selectedContacts
         .filter(contact => {
           const phoneNumber = contact.phoneNumbers?.[0]?.number;
-          const isValid = phoneNumber && phoneNumber.trim().length > 0;
-          if (!isValid) {
-            console.warn(`Skipping contact ${contact.name}: Invalid phone number`);
-          }
-          return isValid;
+          return phoneNumber && phoneNumber.trim().length > 0;
         })
         .map(contact => ({
           id: contact.id || `contact-${Date.now()}-${Math.random()}`,
           name: contact.name || 'Unknown Contact',
           phoneNumber: contact.phoneNumbers?.[0]?.number?.trim() || '',
-          email: contact.emails?.[0]?.email,
-          photo: contact.imageAvailable && contact.image ? contact.image.uri : undefined,
         }));
 
       if (validContacts.length === 0) {
@@ -325,130 +247,102 @@ export default function CallingScreen() {
         return;
       }
 
-      if (validContacts.length < selectedContacts.length) {
-        Alert.alert(
-          'Some Contacts Skipped',
-          `${
-            selectedContacts.length - validContacts.length
-          } contacts were skipped because they don't have valid phone numbers.`
-        );
-      }
-
-      // 6. Start the call
-      console.log('Starting call process...');
-      const groupName = getGroupName();
       const useRecordedMessage = Boolean(user?.is_premium && recordedMessage);
+      const defaultMessage = 'Hello, this is an automated call from the app. Thank you!';
+      const messageContent = useRecordedMessage ? recordedMessage : defaultMessage;
 
-      console.log('Call parameters:', {
-        contactCount: validContacts.length,
-        useRecordedMessage,
-        groupName,
-        isPremium: user?.is_premium,
-      });
-
-      try {
-        // Start the call with valid contacts
-        startCall(validContacts, recordedMessage, useRecordedMessage, groupName);
-
-        // Provide haptic feedback
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-
-        // Log success
-        console.log('Call started successfully');
-      } catch (error) {
-        console.error('Error starting call:', error);
-        Alert.alert(
-          'Error Starting Call',
-          'There was a problem starting the call. Please try again.'
-        );
+      let payload;
+      if (selectedGroup === null) {
+        payload = {
+          userId: Number(user?.id),
+          contacts: validContacts.map(contact => ({
+            name: contact.name,
+            phoneNumber: contact.phoneNumber,
+          })),
+          groupId: 0,
+          groupType: 'MANUAL',
+          messageContent,
+        };
+      } else {
+        payload = {
+          userId: Number(user?.id),
+          groupId: Number(selectedGroup),
+          groupType: 'USER_DEFINED',
+          messageContent,
+        };
       }
-    } catch (error) {
-      console.error('Error in handleStartCall:', error);
-      Alert.alert('Error', 'There was a problem starting the call. Please try again.');
+
+      console.log(payload);
+
+      const response: any = await StartCallSession(payload);
+      if (response.statusCode !== 200) {
+        throw new Error(response.message || 'Failed to start call');
+      }
+
+      setCurrentCall({
+        status: 'in_progress',
+        contacts: validContacts,
+        currentIndex: 0,
+        sessionId: response.data.sessionId,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error.message || 'There was a problem starting the call. Please try again.'
+      );
     }
   };
 
   const handleEndCall = async () => {
     try {
-      console.log('Ending call...');
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      if (!currentCall.sessionId) return;
+
+      const response = await fetch(`${API_URL}/api/v1/call/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: currentCall.sessionId }),
+      });
+
+      const data = await response.json();
+      if (data.statusCode !== 200) {
+        throw new Error(data.message || 'Failed to stop call session');
       }
-      endCall();
-      console.log('Call ended successfully');
-    } catch (error) {
-      console.error('Error ending call:', error);
-      Alert.alert('Error', 'There was a problem ending the call. Please try again.');
-    }
-  };
 
-  const getCallStatusColor = (status: CallStatus) => {
-    switch (status) {
-      case 'calling':
-        return 'bg-warning';
-      case 'connected':
-        return 'bg-success';
-      case 'completed':
-        return 'bg-secondary';
-      case 'failed':
-        return 'bg-error';
-      default:
-        return 'bg-gray-400';
-    }
-  };
-
-  const getCallStatusText = (status: CallStatus) => {
-    switch (status) {
-      case 'calling':
-        return 'Calling...';
-      case 'connected':
-        return 'Connected';
-      case 'completed':
-        return 'Completed';
-      case 'failed':
-        return 'Failed';
-      default:
-        return 'Ready';
+      setCurrentCall({ status: 'idle', contacts: [], currentIndex: 0, sessionId: null });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error.message || 'There was a problem ending the call. Please try again.'
+      );
     }
   };
 
   const handleGroupSelect = (groupId: string | null) => {
     setSelectedGroup(groupId);
     if (groupId) {
-      const group = groups.find((g: Group) => g.id === groupId);
+      const group = filteredGroups.find((g: Group) => g.id === groupId);
       if (group) {
-        // Convert our Contact type to ExpoContact type
-        const expoContacts: ExtendedContact[] = group.contacts.map(contact => ({
-          id: contact.id,
-          name: contact.name,
-          phoneNumbers: [
-            { number: contact.phoneNumbers[0].number, type: 'mobile', label: 'mobile' },
-          ],
-          contactType: 'person',
-        }));
+        const expoContacts: ExtendedContact[] = group.contacts
+          .filter(contact => contact.phone_number && contact.phone_number.trim().length > 0)
+          .map((contact: ApiContact) => ({
+            id: contact.contact_id || String(contact.id),
+            name: contact.name || 'Unknown Contact',
+            phoneNumbers: [
+              {
+                number: contact.phone_number,
+                type: 'mobile',
+                label: 'mobile',
+              },
+            ],
+            contactType: 'person',
+          }));
         setSelectedContacts(expoContacts);
       }
     } else {
       setSelectedContacts([]);
     }
-  };
-
-  const toggleContactSelection = (contact: ExtendedContact) => {
-    if (selectedContacts.some((c: ExtendedContact) => c.id === contact.id)) {
-      setSelectedContacts(selectedContacts.filter((c: ExtendedContact) => c.id !== contact.id));
-    } else {
-      setSelectedContacts([...selectedContacts, contact]);
-    }
-  };
-
-  const getGroupName = () => {
-    if (selectedGroup) {
-      const group = groups.find((g: Group) => g.id === selectedGroup);
-      return group?.name;
-    }
-    return undefined;
   };
 
   const handleRecordMessage = () => {
@@ -457,23 +351,14 @@ export default function CallingScreen() {
         'Premium Feature',
         'Voice recording is a premium feature. Upgrade to Pro to use this feature.',
         [
-          {
-            text: 'Upgrade Now',
-            onPress: () => {
-              // Navigate to upgrade screen
-            },
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+          { text: 'Upgrade Now', onPress: () => console.log('upgrade') },
+          { text: 'Cancel', style: 'cancel' },
         ]
       );
       return;
     }
 
     setIsRecording(true);
-    // Implement actual recording logic here
     setTimeout(() => {
       setIsRecording(false);
       setRecordedMessage('This is a pre-recorded message. Thank you for your attention!');
@@ -486,14 +371,19 @@ export default function CallingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         {/* Header Section */}
         <View className="px-5 pt-6 pb-4">
-          <View className="flex-row items-center mb-1">
-            <Icon name="phone" size={24} color="#1E3A8A" />
-            <Text className="ml-2 text-2xl font-bold text-dark">Start a Call</Text>
+          <View className="flex-row items-center justify-between mb-1">
+            <View className="flex-row items-center">
+              <Icon name="phone" size={24} color="#1E3A8A" />
+              <Text className="ml-2 text-2xl font-bold text-dark">Start a Call</Text>
+            </View>
+            <TouchableOpacity onPress={() => console.log('call history screen')}>
+              <Icon name="history" size={24} color="#1E3A8A" />
+            </TouchableOpacity>
           </View>
           <Text className="ml-10 text-gray-500">Call your contacts sequentially</Text>
         </View>
@@ -501,42 +391,26 @@ export default function CallingScreen() {
         <ScrollView className="flex-1">
           {/* Tutorial Section */}
           {showTutorial && (
-            <View className="p-4 mx-4 mb-6 rounded-lg bg-primary/10">
+            <View className="p-4 mx-4 mb-6 rounded-lg bg-primary/10 shadow-sm">
               <View className="flex-row items-center mb-3">
                 <Icon name="info-circle" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-primary">How it works</Text>
               </View>
               <View className="gap-3 space-y-2">
-                <View className="flex-row items-center">
-                  <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                    <Text className="font-bold text-white">1</Text>
+                {[
+                  'Select contacts or a group',
+                  'Record a message (Premium)',
+                  'Start calling',
+                  'App will automatically call each contact',
+                  'Stop anytime with "End Call Session"',
+                ].map((step, index) => (
+                  <View key={index} className="flex-row items-center">
+                    <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
+                      <Text className="font-bold text-white">{index + 1}</Text>
+                    </View>
+                    <Text className="text-gray-700">{step}</Text>
                   </View>
-                  <Text className="text-gray-700">Select contacts or a group</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                    <Text className="font-bold text-white">2</Text>
-                  </View>
-                  <Text className="text-gray-700">Record a message (Premium)</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                    <Text className="font-bold text-white">3</Text>
-                  </View>
-                  <Text className="text-gray-700">Start calling</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                    <Text className="font-bold text-white">4</Text>
-                  </View>
-                  <Text className="text-gray-700">App will automatically call each contact</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View className="items-center justify-center w-6 h-6 mr-2 rounded-full bg-primary">
-                    <Text className="font-bold text-white">5</Text>
-                  </View>
-                  <Text className="text-gray-700">Stop anytime with "End Call Session"</Text>
-                </View>
+                ))}
               </View>
               <TouchableOpacity className="self-end mt-4" onPress={() => setShowTutorial(false)}>
                 <Text className="font-medium text-primary">Got it</Text>
@@ -547,41 +421,51 @@ export default function CallingScreen() {
           {/* Main Content */}
           <View className="gap-4 px-4 space-y-4">
             {/* Group Selection */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center mb-3">
                 <Icon name="users" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-dark">Select Group</Text>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-                <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${
-                    selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
-                  }`}
-                  onPress={() => handleGroupSelect(null)}
-                >
-                  <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
-                    Custom
-                  </Text>
-                </TouchableOpacity>
-
-                {groups.map((group: Group) => (
+              {isFetchingGroups ? (
+                <Text className="text-gray-500">Loading groups...</Text>
+              ) : filteredGroups.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                   <TouchableOpacity
-                    key={group.id}
                     className={`mr-3 py-2 px-4 rounded-lg ${
-                      selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
+                      selectedGroup === null ? 'bg-primary' : 'bg-gray-100'
                     }`}
-                    onPress={() => handleGroupSelect(group.id)}
+                    onPress={() => handleGroupSelect(null)}
                   >
-                    <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
-                      {group.name}
+                    <Text className={selectedGroup === null ? 'text-white' : 'text-gray-700'}>
+                      Custom
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
+                  {filteredGroups.map((group: Group) => (
+                    <TouchableOpacity
+                      key={group.id}
+                      className={`mr-3 py-2 px-4 rounded-lg ${
+                        selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
+                      }`}
+                      onPress={() => handleGroupSelect(group.id)}
+                    >
+                      <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
+                        {group.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <View className="flex-row items-center">
+                  <Text className="text-gray-500">No user-defined groups available</Text>
+                  <TouchableOpacity onPress={() => fetchGroups()} className="ml-2">
+                    <Text className="text-primary">Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             {/* Contact Selection */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center">
                   <Icon name="address-book" size={20} color="#1E3A8A" />
@@ -593,7 +477,6 @@ export default function CallingScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-
               {selectedContacts.length > 0 ? (
                 <View>
                   <Text className="mb-3 text-gray-500">
@@ -637,7 +520,7 @@ export default function CallingScreen() {
             </View>
 
             {/* Voice Message */}
-            <View className="p-4 bg-white rounded-lg shadow-sm">
+            <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center mb-3">
                 <Icon name="microphone" size={20} color="#1E3A8A" />
                 <Text className="ml-2 text-lg font-bold text-dark">Voice Message</Text>
@@ -647,7 +530,6 @@ export default function CallingScreen() {
                   </View>
                 )}
               </View>
-
               <TouchableOpacity
                 className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
                   isRecording ? 'bg-error/10' : ''
@@ -671,7 +553,6 @@ export default function CallingScreen() {
                 </View>
                 <Icon name="microphone" size={20} color={isRecording ? '#EF4444' : '#64748b'} />
               </TouchableOpacity>
-
               {recordedMessage && (
                 <View className="p-3 mt-4 rounded-lg bg-gray-50">
                   <Text className="text-gray-700">{recordedMessage}</Text>
@@ -680,23 +561,25 @@ export default function CallingScreen() {
             </View>
 
             {/* Start Calling Button */}
-            <TouchableOpacity
-              className={`bg-primary rounded-lg py-2 items-center my-2 ${
-                selectedContacts.length === 0 ? 'opacity-50' : ''
-              }`}
-              onPress={handleStartCall}
-              disabled={selectedContacts.length === 0}
-            >
-              <View className="flex-row items-center">
-                <Icon name="phone" size={20} color="white" />
-                <Text className="ml-2 text-lg font-bold text-white">Start Calling</Text>
-              </View>
-              {selectedContacts.length > 0 && (
-                <Text className="mt-1 text-white/80">
-                  {selectedContacts.length} contacts selected
-                </Text>
-              )}
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity
+                className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${
+                  selectedContacts.length === 0 ? 'opacity-50' : ''
+                }`}
+                onPress={handleStartCall}
+                disabled={selectedContacts.length === 0}
+              >
+                <View className="flex-row items-center">
+                  <Icon name="phone" size={20} color="white" />
+                  <Text className="ml-2 text-lg font-bold text-white">Start Calling</Text>
+                </View>
+                {selectedContacts.length > 0 && (
+                  <Text className="mt-1 text-white/80">
+                    {selectedContacts.length} contacts selected
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         </ScrollView>
 
