@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { io, Socket } from 'socket.io-client';
 
-const API_URL = 'https://6811-103-165-167-98.ngrok-free.app'; // Replace with production URL
+const API_URL = 'https://busappnodejs.onrender.com'; // Replace with production URL
 
 export default function CallingScreen() {
   const { user } = useAuth();
