@@ -1,7 +1,7 @@
-import ActiveCallScreen from '@/components/ActiveCallScreen';
 import ContactSelector from '@/components/ContactSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet, usePost } from '@/hooks/useApi';
+import { ApiContact, CallHistoryEntry, CallState, Group } from '@/types/calling.types';
 import { ExtendedContact } from '@/types/contact.types';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -20,37 +20,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 
-// Define the contact structure as per the API response
-interface ApiContact {
-  id: number;
-  group_id: number;
-  contact_id: string | null;
-  name: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone_number: string;
-  country_code: string | null;
-  raw_contact: any;
-  created_at: string;
-  updated_at: string;
-  is_contact_from_device: boolean;
-}
-
-interface Group {
-  id: string; // Changed from group_id to match API response
-  name: string;
-  contacts: ApiContact[];
-  group_type: 'MANUAL' | 'USER_DEFINED';
-  group_name: string;
-}
-
-interface CallState {
-  status: 'idle' | 'in_progress' | 'completed' | 'stopped';
-  contacts: Array<{ id: string; name: string; phoneNumber: string }>;
-  currentIndex: number;
-  sessionId: number | null;
-}
-
 type CallStatus = 'idle' | 'in_progress' | 'completed' | 'stopped';
 
 export default function CallingScreen() {
@@ -68,21 +37,22 @@ export default function CallingScreen() {
     contacts: [],
     currentIndex: 0,
     sessionId: null,
+    currentContact: null,
+    attempt: 0,
   });
+  const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);
   const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
   const [filteredGroups, setFilteredGroups] = useState<Group[]>([]);
 
-  const API_URL = 'https://6811-103-165-167-98.ngrok-free.app';
+  const API_URL = 'https://6811-103-165-167-98.ngrok-free.app'; // Replace with your actual Ngrok URL
   const isCallActive = currentCall.status !== 'idle';
-  const currentContact = isCallActive && currentCall.contacts[currentCall.currentIndex];
 
-  // Fetch groups using useGet
   const {
     data: fetchedGroups,
     refetch: fetchGroups,
     isFetching: isFetchingGroups,
   } = useGet<any, { userId: string | undefined }>(
-    '/group/get-groups',
+    'group/get-groups',
     { userId: stableUserId },
     {
       showErrorToast: true,
@@ -91,22 +61,20 @@ export default function CallingScreen() {
     }
   );
 
-  // API hooks
-  const { mutateAsync: StartCallSession } = usePost('/call/call_list', {
-    invalidateQueriesOnSuccess: ['/group/get-groups'],
+  const { mutateAsync: StartCallSession } = usePost('call/call_list', {
+    invalidateQueriesOnSuccess: [],
     showErrorToast: true,
     showSuccessToast: true,
     showLoader: true,
   });
 
-  // Filter out MANUAL groups when fetchedGroups changes
   useEffect(() => {
     if (fetchedGroups?.data && Array.isArray(fetchedGroups.data)) {
       const nonManualGroups = fetchedGroups.data
         .filter((group: any) => group.group_type !== 'MANUAL')
         .map((group: any) => ({
           ...group,
-          id: String(group.id), // Use group.id instead of group.group_id
+          id: String(group.id),
           name: group.group_name,
         }));
       setFilteredGroups(nonManualGroups);
@@ -115,7 +83,6 @@ export default function CallingScreen() {
     }
   }, [fetchedGroups]);
 
-  // Initialize Socket.IO connection with proper typing
   const [socket, setSocket] = useState<Socket | null>(null);
   useEffect(() => {
     const socketInstance: Socket = io(API_URL, {
@@ -140,7 +107,6 @@ export default function CallingScreen() {
     };
   }, []);
 
-  // Listen for call status updates via Socket.IO with typed data
   useEffect(() => {
     if (!socket || !currentCall.sessionId) return;
 
@@ -151,27 +117,57 @@ export default function CallingScreen() {
         status: CallStatus;
         currentIndex: number;
         totalCalls: number;
+        currentContact: { name: string; phoneNumber: string } | null;
+        attempt: number;
       }) => {
         if (data.sessionId !== currentCall.sessionId) return;
 
-        const { status, currentIndex, totalCalls } = data;
         setCurrentCall(prev => ({
           ...prev,
-          status,
-          currentIndex: currentIndex || prev.currentIndex,
+          status: data.status,
+          currentIndex: data.currentIndex || prev.currentIndex,
+          currentContact: data.currentContact,
+          attempt: data.attempt,
         }));
 
-        if (currentIndex >= totalCalls - 1 || status === 'completed' || status === 'stopped') {
-          setCurrentCall(prev => ({
-            ...prev,
-            status: 'completed',
-          }));
+        if (
+          data.currentIndex >= data.totalCalls ||
+          data.status === 'completed' ||
+          data.status === 'stopped'
+        ) {
+          setCurrentCall({
+            status: 'idle',
+            contacts: [],
+            currentIndex: 0,
+            sessionId: null,
+            currentContact: null,
+            attempt: 0,
+          });
+          setCallHistory([]);
+          Alert.alert('Call Session Ended', 'All calls have been completed.');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }
     );
 
+    socket.on('callHistoryUpdate', (data: { sessionId: number; callHistory: CallHistoryEntry }) => {
+      if (data.sessionId !== currentCall.sessionId) return;
+
+      setCallHistory(prev => {
+        const existingIndex = prev.findIndex(entry => entry.id === data.callHistory.id);
+        if (existingIndex >= 0) {
+          const updatedHistory = [...prev];
+          updatedHistory[existingIndex] = data.callHistory;
+          return updatedHistory;
+        } else {
+          return [...prev, data.callHistory];
+        }
+      });
+    });
+
     return () => {
       socket.off('callStatusUpdate');
+      socket.off('callHistoryUpdate');
     };
   }, [socket, currentCall.sessionId]);
 
@@ -271,7 +267,6 @@ export default function CallingScreen() {
           messageContent,
         };
       }
-
       console.log(payload);
 
       const response: any = await StartCallSession(payload);
@@ -284,6 +279,8 @@ export default function CallingScreen() {
         contacts: validContacts,
         currentIndex: 0,
         sessionId: response.data.sessionId,
+        currentContact: validContacts[0],
+        attempt: 1,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
@@ -298,7 +295,7 @@ export default function CallingScreen() {
     try {
       if (!currentCall.sessionId) return;
 
-      const response = await fetch(`${API_URL}/api/v1/call/stop`, {
+      const response = await fetch(`${API_URL}/call/stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: currentCall.sessionId }),
@@ -309,7 +306,15 @@ export default function CallingScreen() {
         throw new Error(data.message || 'Failed to stop call session');
       }
 
-      setCurrentCall({ status: 'idle', contacts: [], currentIndex: 0, sessionId: null });
+      setCurrentCall({
+        status: 'idle',
+        contacts: [],
+        currentIndex: 0,
+        sessionId: null,
+        currentContact: null,
+        attempt: 0,
+      });
+      setCallHistory([]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (error: any) {
       Alert.alert(
@@ -366,15 +371,86 @@ export default function CallingScreen() {
     }, 2000);
   };
 
-  if (isCallActive && currentContact) {
-    return <ActiveCallScreen currentContact={currentContact} onEndCall={handleEndCall} />;
+  if (isCallActive) {
+    return (
+      <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        <View className="flex-1 p-5">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-2xl font-bold text-dark">Active Call</Text>
+            <TouchableOpacity onPress={handleEndCall}>
+              <Icon name="times" size={24} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+          {currentCall.currentContact && (
+            <View className="items-center mb-6">
+              <View className="items-center justify-center w-16 h-16 mb-2 rounded-full bg-primary/10">
+                <Icon name="user" size={32} color="#1E3A8A" />
+              </View>
+              <Text className="text-lg font-bold text-dark">{currentCall.currentContact.name}</Text>
+              <Text className="text-gray-500">{currentCall.currentContact.phoneNumber}</Text>
+              <Text className="mt-2 text-primary">
+                {currentCall.status === 'in_progress'
+                  ? `Calling (Attempt ${currentCall.attempt})...`
+                  : 'Call Ended'}
+              </Text>
+            </View>
+          )}
+          <View className="flex-1">
+            <Text className="mb-3 text-lg font-bold text-dark">Call Progress</Text>
+            <ScrollView>
+              {currentCall.contacts.map((contact, index) => {
+                const historyEntry = callHistory.find(
+                  entry => entry.contact_phone === contact.phoneNumber
+                );
+                const status =
+                  historyEntry?.status ||
+                  (index === currentCall.currentIndex ? 'IN_PROGRESS' : 'PENDING');
+                return (
+                  <View
+                    key={contact.id}
+                    className="flex-row items-center p-3 mb-2 rounded-lg bg-white shadow-sm"
+                  >
+                    <View className="items-center justify-center w-10 h-10 mr-3 rounded-full bg-primary/10">
+                      <Icon name="user" size={20} color="#1E3A8A" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-medium text-dark">{contact.name}</Text>
+                      <Text className="text-sm text-gray-500">{contact.phoneNumber}</Text>
+                    </View>
+                    <Text
+                      className={`text-sm ${
+                        status === 'ACCEPTED'
+                          ? 'text-green-500'
+                          : status === 'FAILED' || status === 'DECLINED'
+                          ? 'text-red-500'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {status === 'IN_PROGRESS'
+                        ? `Calling (Attempt ${historyEntry?.attempt || 1})`
+                        : status}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+          <TouchableOpacity
+            className="bg-error rounded-lg py-3 items-center mt-4"
+            onPress={handleEndCall}
+          >
+            <Text className="text-lg font-bold text-white">End Call Session</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        {/* Header Section */}
         <View className="px-5 pt-6 pb-4">
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center">
@@ -389,7 +465,6 @@ export default function CallingScreen() {
         </View>
 
         <ScrollView className="flex-1">
-          {/* Tutorial Section */}
           {showTutorial && (
             <View className="p-4 mx-4 mb-6 rounded-lg bg-primary/10 shadow-sm">
               <View className="flex-row items-center mb-3">
@@ -418,9 +493,7 @@ export default function CallingScreen() {
             </View>
           )}
 
-          {/* Main Content */}
           <View className="gap-4 px-4 space-y-4">
-            {/* Group Selection */}
             <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center mb-3">
                 <Icon name="users" size={20} color="#1E3A8A" />
@@ -464,7 +537,6 @@ export default function CallingScreen() {
               )}
             </View>
 
-            {/* Contact Selection */}
             <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center">
@@ -519,7 +591,6 @@ export default function CallingScreen() {
               )}
             </View>
 
-            {/* Voice Message */}
             <View className="p-4 bg-white rounded-lg shadow-md">
               <View className="flex-row items-center mb-3">
                 <Icon name="microphone" size={20} color="#1E3A8A" />
@@ -560,7 +631,6 @@ export default function CallingScreen() {
               )}
             </View>
 
-            {/* Start Calling Button */}
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
               <TouchableOpacity
                 className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${
