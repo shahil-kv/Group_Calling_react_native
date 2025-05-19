@@ -14,8 +14,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
+
+const API_URL = 'https://6811-103-165-167-98.ngrok-free.app'; // Replace with production URL
 
 export default function CallingScreen() {
   const { user } = useAuth();
@@ -35,7 +36,6 @@ export default function CallingScreen() {
   const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);
   const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const API_URL = 'https://6811-103-165-167-98.ngrok-free.app'; // Replace with your actual Ngrok URL
   const isCallActive = currentCall.status !== 'idle';
 
   const {
@@ -45,11 +45,7 @@ export default function CallingScreen() {
   } = useGet<any, { userId: string | undefined }>(
     'group/get-groups',
     { userId: stableUserId },
-    {
-      showErrorToast: true,
-      showSuccessToast: false,
-      showLoader: false,
-    }
+    { showErrorToast: true, showSuccessToast: false, showLoader: false }
   );
 
   const { mutateAsync: StartCallSession } = usePost('call/call_list', {
@@ -66,7 +62,6 @@ export default function CallingScreen() {
     showLoader: true,
   });
 
-  //empty array in useEffect means if the props change the useEffect will not run again only in mount
   useEffect(() => {
     const socketInstance: Socket = io(API_URL, {
       transports: ['websocket'],
@@ -75,14 +70,10 @@ export default function CallingScreen() {
       reconnectionDelay: 1000,
     });
 
-    socketInstance.on('connect', () => {
-      console.log('Socket.IO connected');
-    });
-
-    socketInstance.on('connect_error', error => {
-      console.error('Socket.IO connection error:', error);
-    });
-
+    socketInstance.on('connect', () => console.log('Socket.IO connected'));
+    socketInstance.on('connect_error', error =>
+      console.error('Socket.IO connection error:', error)
+    );
     setSocket(socketInstance);
 
     return () => {
@@ -95,8 +86,6 @@ export default function CallingScreen() {
 
     socket.on('callStatusUpdate', (data: CallStatusData) => {
       if (data.sessionId !== currentCall.sessionId) return;
-
-      console.log({ 'status:': data });
 
       setCurrentCall(prev => ({
         ...prev,
@@ -127,7 +116,6 @@ export default function CallingScreen() {
 
     socket.on('callHistoryUpdate', (data: { sessionId: number; callHistory: CallHistoryEntry }) => {
       if (data.sessionId !== currentCall.sessionId) return;
-      console.log({ 'callHistoryUpdate:': data });
 
       setCallHistory(prev => {
         const existingIndex = prev.findIndex(entry => entry.id === data.callHistory.id);
@@ -135,9 +123,8 @@ export default function CallingScreen() {
           const updatedHistory = [...prev];
           updatedHistory[existingIndex] = data.callHistory;
           return updatedHistory;
-        } else {
-          return [...prev, data.callHistory];
         }
+        return [...prev, data.callHistory];
       });
     });
 
@@ -148,24 +135,20 @@ export default function CallingScreen() {
   }, [socket, currentCall.sessionId]);
 
   const validContacts = useMemo(() => {
-    let FilteredContacts;
-    return (FilteredContacts = selectedContacts
-      .filter(contact => {
-        const phoneNumber = contact.phoneNumbers?.[0]?.number;
-        return phoneNumber && phoneNumber.trim().length > 0;
-      })
+    return selectedContacts
+      .filter(contact => contact.phoneNumbers?.[0]?.number?.trim())
       .map(contact => ({
         id: contact.id || `contact-${Date.now()}-${Math.random()}`,
         name: contact.name || 'Unknown Contact',
         phoneNumber: contact.phoneNumbers?.[0]?.number?.trim() || '',
-      })));
+      }));
   }, [selectedContacts]);
 
   const confirmSequentialCalls = () => {
     return new Promise(resolve => {
       Alert.alert(
         'Start Sequential Calls',
-        `This will automatically call ${selectedContacts.length} contacts in sequence. The app will automatically proceed to the next contact after each call ends. You can stop at any time by pressing "End Call Session".`,
+        `This will call ${selectedContacts.length} contacts in sequence. You can stop at any time.`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           { text: 'Start Calling', style: 'default', onPress: () => resolve(true) },
@@ -180,7 +163,7 @@ export default function CallingScreen() {
       const MAX_CONTACTS_PREMIUM = 500;
 
       if (selectedContacts.length === 0) {
-        Alert.alert('No Contacts Selected', 'Please select at least one contact to call.');
+        Alert.alert('No Contacts Selected', 'Please select at least one contact.');
         return;
       }
 
@@ -188,7 +171,7 @@ export default function CallingScreen() {
       if (selectedContacts.length > contactLimit) {
         Alert.alert(
           'Contact Limit Exceeded',
-          `Free users can call up to ${MAX_CONTACTS_FREE} contacts. Upgrade to Pro to call up to ${MAX_CONTACTS_PREMIUM} contacts.`
+          `Free users: ${MAX_CONTACTS_FREE} contacts. Pro: ${MAX_CONTACTS_PREMIUM}.`
         );
         return;
       }
@@ -197,38 +180,35 @@ export default function CallingScreen() {
       if (!confirmed) return;
 
       if (validContacts.length === 0) {
-        Alert.alert('Invalid Contacts', 'None of the selected contacts have valid phone numbers.');
+        Alert.alert('Invalid Contacts', 'No valid phone numbers found.');
         return;
       }
 
-      const useRecordedMessage = Boolean(user?.is_premium && recordedMessage);
-      const defaultMessage = 'Hello, this is an automated call from the app. Thank you!';
-      const messageContent = useRecordedMessage ? recordedMessage : defaultMessage;
+      const messageContent =
+        user?.is_premium && recordedMessage
+          ? recordedMessage
+          : 'Hello, this is an automated call. Thank you!';
 
-      let payload;
-      if (selectedGroup === null) {
-        payload = {
-          userId: Number(user?.id),
-          contacts: validContacts.map(contact => ({
-            name: contact.name,
-            phoneNumber: contact.phoneNumber,
-          })),
-          groupId: 0,
-          groupType: 'MANUAL',
-          messageContent,
-        };
-      } else {
-        payload = {
-          userId: Number(user?.id),
-          groupId: Number(selectedGroup),
-          groupType: 'USER_DEFINED',
-          messageContent,
-        };
-      }
+      const payload =
+        selectedGroup === null
+          ? {
+              userId: Number(user?.id),
+              contacts: validContacts.map(contact => ({
+                name: contact.name,
+                phoneNumber: contact.phoneNumber,
+              })),
+              groupId: 0,
+              groupType: 'MANUAL',
+              messageContent,
+            }
+          : {
+              userId: Number(user?.id),
+              groupId: Number(selectedGroup),
+              groupType: 'USER_DEFINED',
+              messageContent,
+            };
 
       const response: any = await StartCallSession(payload);
-      console.log({ ' call Session response:': response });
-
       if (response.statusCode !== 200) {
         throw new Error(response.message || 'Failed to start call');
       }
@@ -243,12 +223,10 @@ export default function CallingScreen() {
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'There was a problem starting the call. Please try again.'
-      );
+      Alert.alert('Error', error.message || 'Failed to start call.');
     }
   };
+
   const handleEndCall = useCallback(async () => {
     try {
       if (!currentCall.sessionId) return;
@@ -268,33 +246,21 @@ export default function CallingScreen() {
       setCallHistory([]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'There was a problem ending the call. Please try again.'
-      );
+      Alert.alert('Error', error.message || 'Failed to end call.');
     }
-  }, [currentCall, setCurrentCall, setCallHistory]);
+  }, [currentCall, StopCallSession]);
 
   const handleGroupSelect = (groupId: string | null) => {
     setSelectedGroup(groupId);
     if (groupId) {
-      const group =
-        fetchedGroups?.data &&
-        Array.isArray(fetchedGroups.data) &&
-        fetchedGroups.data.find((g: Group) => g.id === groupId);
+      const group = fetchedGroups?.data?.find((g: Group) => g.id === groupId);
       if (group) {
         const expoContacts: ExtendedContact[] = group.contacts
-          .filter((contact: any) => contact.phone_number && contact.phone_number.trim().length > 0)
+          .filter((contact: ApiContact) => contact.phone_number?.trim())
           .map((contact: ApiContact) => ({
             id: contact.contact_id || String(contact.id),
             name: contact.name || 'Unknown Contact',
-            phoneNumbers: [
-              {
-                number: contact.phone_number,
-                type: 'mobile',
-                label: 'mobile',
-              },
-            ],
+            phoneNumbers: [{ number: contact.phone_number, type: 'mobile', label: 'mobile' }],
             contactType: 'person',
           }));
         setSelectedContacts(expoContacts);
@@ -306,25 +272,38 @@ export default function CallingScreen() {
 
   const handleRecordMessage = () => {
     if (!user?.is_premium) {
-      Alert.alert(
-        'Premium Feature',
-        'Voice recording is a premium feature. Upgrade to Pro to use this feature.',
-        [
-          { text: 'Upgrade Now', onPress: () => console.log('upgrade') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      Alert.alert('Premium Feature', 'Voice recording requires Pro. Upgrade now.', [
+        { text: 'Upgrade Now', onPress: () => console.log('upgrade') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
       return;
     }
 
     setIsRecording(true);
     setTimeout(() => {
       setIsRecording(false);
-      setRecordedMessage('This is a pre-recorded message. Thank you for your attention!');
-      Alert.alert('Message Recorded', 'Your message has been recorded successfully.');
+      setRecordedMessage('This is a pre-recorded message. Thank you!');
+      Alert.alert('Message Recorded', 'Your message has been recorded.');
     }, 2000);
   };
 
+  const getStatusDisplay = (status: string, attempt: number) => {
+    console.log(status);
+    switch (status) {
+      case 'ACCEPTED':
+        return 'Accepted';
+      case 'MISSED':
+        return 'Rejected'; // Display "Rejected" for missed calls
+      case 'DECLINED':
+        return 'Busy';
+      case 'FAILED':
+        return 'Failed';
+      case 'IN_PROGRESS':
+        return `Calling`;
+      default:
+        return status;
+    }
+  };
   if (isCallActive) {
     return (
       <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
@@ -344,9 +323,7 @@ export default function CallingScreen() {
               <Text className="text-lg font-bold text-dark">{currentCall.currentContact.name}</Text>
               <Text className="text-gray-500">{currentCall.currentContact.phoneNumber}</Text>
               <Text className="mt-2 text-primary">
-                {currentCall.status === 'in_progress'
-                  ? `Calling (Attempt ${currentCall.attempt})...`
-                  : 'Call Ended'}
+                {getStatusDisplay(currentCall.status, currentCall.attempt)}
               </Text>
             </View>
           )}
@@ -381,9 +358,7 @@ export default function CallingScreen() {
                           : 'text-gray-500'
                       }`}
                     >
-                      {status === 'IN_PROGRESS'
-                        ? `Calling (Attempt ${historyEntry?.attempt || 1})`
-                        : status}
+                      {getStatusDisplay(status, historyEntry?.attempt || 1)}
                     </Text>
                   </View>
                 );
@@ -418,16 +393,14 @@ export default function CallingScreen() {
       </View>
       <ScrollView className="flex-1">
         <View className="gap-4 px-4 space-y-4">
-          <View className="p-4 bg-white rounded-lg ">
+          <View className="p-4 bg-white rounded-lg">
             <View className="flex-row items-center mb-3">
               <Icon name="users" size={20} color="#1E3A8A" />
               <Text className="ml-2 text-lg font-bold text-dark">Select Group</Text>
             </View>
             {isFetchingGroups ? (
               <Text className="text-gray-500">Loading groups...</Text>
-            ) : fetchedGroups?.data &&
-              Array.isArray(fetchedGroups.data) &&
-              fetchedGroups.data.length > 0 ? (
+            ) : fetchedGroups?.data?.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
                   className={`mr-3 py-2 px-4 rounded-lg ${
@@ -439,33 +412,30 @@ export default function CallingScreen() {
                     Custom
                   </Text>
                 </TouchableOpacity>
-                {fetchedGroups?.data &&
-                  Array.isArray(fetchedGroups.data) &&
-                  fetchedGroups.data.map((group: Group) => (
-                    <TouchableOpacity
-                      key={group.id}
-                      className={`mr-3 py-2 px-4 rounded-lg ${
-                        selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
-                      }`}
-                      onPress={() => handleGroupSelect(group.id)}
-                    >
-                      <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
-                        {group.group_name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                {fetchedGroups.data.map((group: Group) => (
+                  <TouchableOpacity
+                    key={group.id}
+                    className={`mr-3 py-2 px-4 rounded-lg ${
+                      selectedGroup === group.id ? 'bg-primary' : 'bg-gray-100'
+                    }`}
+                    onPress={() => handleGroupSelect(group.id)}
+                  >
+                    <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
+                      {group.group_name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             ) : (
               <View className="flex-row items-center">
-                <Text className="text-gray-500">No user-defined groups available</Text>
+                <Text className="text-gray-500">No groups available</Text>
                 <TouchableOpacity onPress={() => fetchGroups()} className="ml-2">
                   <Text className="text-primary">Retry</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
-
-          <View className="p-4 bg-white rounded-lg ">
+          <View className="p-4 bg-white rounded-lg">
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center">
                 <Icon name="address-book" size={20} color="#1E3A8A" />
@@ -507,7 +477,7 @@ export default function CallingScreen() {
               <View className="items-center p-4 rounded-lg bg-gray-50">
                 <Icon name="user-plus" size={32} color="#94A3B8" />
                 <Text className="mt-2 text-center text-gray-500">
-                  No contacts selected. Select a group or add contacts individually.
+                  No contacts selected. Select a group or add contacts.
                 </Text>
                 <TouchableOpacity
                   className="px-4 py-2 mt-4 rounded-lg bg-primary"
@@ -518,8 +488,7 @@ export default function CallingScreen() {
               </View>
             )}
           </View>
-
-          <View className="p-4 bg-white rounded-lg ">
+          <View className="p-4 bg-white rounded-lg">
             <View className="flex-row items-center mb-3">
               <Icon name="microphone" size={20} color="#1E3A8A" />
               <Text className="ml-2 text-lg font-bold text-dark">Voice Message</Text>
@@ -558,7 +527,6 @@ export default function CallingScreen() {
               </View>
             )}
           </View>
-
           <TouchableOpacity
             className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${
               selectedContacts.length === 0 ? 'opacity-50' : ''
@@ -578,7 +546,6 @@ export default function CallingScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
       <Modal
         visible={isSelectingContacts}
         animationType="slide"
