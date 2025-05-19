@@ -40,4 +40,16 @@ interface CallHistoryEntry {
     ended_at: string | null;
 }
 
-export type { ApiContact, CallHistoryEntry, CallState, Group };
+type CallStatus = 'idle' | 'in_progress' | 'completed' | 'stopped';
+
+type CallStatusData = {
+    sessionId: number,
+    status: CallStatus,
+    currentIndex: number,
+    totalCalls: number,
+    currentContact: { name: string; phoneNumber: string } | null,
+    attempt: number,
+}
+
+export type { ApiContact, CallHistoryEntry, CallState, CallStatus, CallStatusData, Group };
+
