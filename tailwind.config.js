@@ -157,11 +157,6 @@ module.exports = {
           '--statuscard-info-2': '#93C5FD',      // Blue 300
         },
       });
-      addUtilities({
-        '.placeholder-text-secondary': {
-          placeholderTextColor: 'var(--color-primary)',
-        },
-      });
     },
   ],
 };
