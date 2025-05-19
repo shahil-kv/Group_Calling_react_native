@@ -9,6 +9,8 @@ import {
   Group,
 } from '@/types/calling.types';
 import { ExtendedContact } from '@/types/contact.types';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
@@ -20,6 +22,7 @@ const API_URL = 'https://busappnodejs.onrender.com'; // Replace with production 
 
 export default function CallingScreen() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<ExtendedContact[]>([]);
   const [isSelectingContacts, setIsSelectingContacts] = useState(false);
@@ -61,6 +64,15 @@ export default function CallingScreen() {
     showSuccessToast: true,
     showLoader: true,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['group/get-groups'] });
+      fetchGroups().catch(() => {
+        Alert.alert('Error', 'Failed to fetch groups. Please try again.');
+      });
+    }, [queryClient, fetchGroups, stableUserId])
+  );
 
   useEffect(() => {
     const socketInstance: Socket = io(API_URL, {
@@ -192,21 +204,21 @@ export default function CallingScreen() {
       const payload =
         selectedGroup === null
           ? {
-            userId: Number(user?.id),
-            contacts: validContacts.map(contact => ({
-              name: contact.name,
-              phoneNumber: contact.phoneNumber,
-            })),
-            groupId: 0,
-            groupType: 'MANUAL',
-            messageContent,
-          }
+              userId: Number(user?.id),
+              contacts: validContacts.map(contact => ({
+                name: contact.name,
+                phoneNumber: contact.phoneNumber,
+              })),
+              groupId: 0,
+              groupType: 'MANUAL',
+              messageContent,
+            }
           : {
-            userId: Number(user?.id),
-            groupId: Number(selectedGroup),
-            groupType: 'USER_DEFINED',
-            messageContent,
-          };
+              userId: Number(user?.id),
+              groupId: Number(selectedGroup),
+              groupType: 'USER_DEFINED',
+              messageContent,
+            };
 
       const response: any = await StartCallSession(payload);
       if (response.statusCode !== 200) {
@@ -288,7 +300,6 @@ export default function CallingScreen() {
   };
 
   const getStatusDisplay = (status: string, attempt: number) => {
-    console.log(status);
     switch (status) {
       case 'ACCEPTED':
         return 'Accepted';
@@ -350,12 +361,13 @@ export default function CallingScreen() {
                       <Text className="text-sm text-gray-500">{contact.phoneNumber}</Text>
                     </View>
                     <Text
-                      className={`text-sm ${status === 'ACCEPTED'
+                      className={`text-sm ${
+                        status === 'ACCEPTED'
                           ? 'text-green-500'
                           : status === 'FAILED' || status === 'DECLINED'
-                            ? 'text-red-500'
-                            : 'text-gray-500'
-                        }`}
+                          ? 'text-red-500'
+                          : 'text-gray-500'
+                      }`}
                     >
                       {getStatusDisplay(status, historyEntry?.attempt || 1)}
                     </Text>
@@ -402,8 +414,9 @@ export default function CallingScreen() {
             ) : fetchedGroups?.data?.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
-                    }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${
+                    selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
+                  }`}
                   onPress={() => handleGroupSelect(null)}
                 >
                   <Text className={selectedGroup === null ? 'text-white' : 'text-text-primary'}>
@@ -413,8 +426,9 @@ export default function CallingScreen() {
                 {fetchedGroups.data.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
-                      }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${
+                      selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
+                    }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
                     <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
@@ -496,8 +510,9 @@ export default function CallingScreen() {
               )}
             </View>
             <TouchableOpacity
-              className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
-                } ${!user?.is_premium ? 'opacity-50' : ''}`}
+              className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
+                isRecording ? 'bg-error/10' : ''
+              } ${!user?.is_premium ? 'opacity-50' : ''}`}
               onPress={handleRecordMessage}
               disabled={!user?.is_premium}
             >
@@ -506,8 +521,8 @@ export default function CallingScreen() {
                   {isRecording
                     ? 'Recording...'
                     : recordedMessage
-                      ? 'Re-record Message'
-                      : 'Record Voice Message'}
+                    ? 'Re-record Message'
+                    : 'Record Voice Message'}
                 </Text>
                 {!user?.is_premium && (
                   <Text className="mt-1 text-sm text-gray-500">
@@ -524,8 +539,9 @@ export default function CallingScreen() {
             )}
           </View>
           <TouchableOpacity
-            className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${selectedContacts.length === 0 ? 'opacity-50' : ''
-              }`}
+            className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${
+              selectedContacts.length === 0 ? 'opacity-50' : ''
+            }`}
             onPress={handleStartCall}
             disabled={selectedContacts.length === 0}
           >
