@@ -2,11 +2,12 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configureReanimatedLogger } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -27,11 +28,28 @@ const queryClient = new QueryClient();
 // Component to handle StatusBar styling
 const StatusBarWithTheme = () => {
   const { theme } = useTheme();
+  const backgroundColor = theme === 'dark' ? '#0F172A' : '#F8FAFC';
+
   return (
-    <StatusBar
-      style={theme === 'dark' ? 'light' : 'dark'}
-      backgroundColor={theme === 'dark' ? '#0F172A' : '#F8FAFC'}
-    />
+    <>
+      {/* View to render under the status bar for background color */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: Constants.statusBarHeight,
+          backgroundColor: backgroundColor,
+          zIndex: 1
+        }}
+      />
+      {/* Status bar with transparent background */}
+      <StatusBar
+        style={theme === 'dark' ? 'light' : 'dark'}
+        translucent={true}
+      />
+    </>
   );
 };
 
