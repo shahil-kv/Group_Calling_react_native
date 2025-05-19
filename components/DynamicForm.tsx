@@ -8,9 +8,15 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { DynamicField, FormFieldsProps } from '../types/dynamic-form';
+
+const colorScheme = useColorScheme();
+const isDark = colorScheme === 'dark';
+
+const placeholderColor = isDark ? '#CBD5E1' : '#475569';
+
 
 const getKeyboardType = (type: string) => {
   switch (type) {
@@ -51,9 +57,9 @@ const PasswordInput: React.FC<{
   return (
     <View className="relative">
       <TextInput
-        className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
+        className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary "
         placeholder={placeholder}
-        placeholderTextColor="#64748b"
+        placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={onChange}
         secureTextEntry={!showPassword}
@@ -110,9 +116,9 @@ const PhoneInput: React.FC<{
         <Icon name="chevron-down" size={16} color="gray" />
       </TouchableOpacity>
       <TextInput
-        className="flex-1 p-4 placeholder:text-text-secondary"
+        className="flex-1 p-4 text-text-primary"
         placeholder={placeholder}
-        placeholderTextColor="#64748b"
+        placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={handlePhoneChange}
         keyboardType="phone-pad"
@@ -185,9 +191,9 @@ const FormFields: React.FC<FormFieldsProps> = ({ control, fields, errors }) => {
               }
               return (
                 <TextInput
-                  className="p-4 border border-gray-300 rounded-lg bg-background-primary placeholder:text-text-secondary"
+                  className="p-4 border border-gray-300 rounded-lg bg-background-primary text-text-primary"
                   placeholder={field.placeholder}
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={placeholderColor}
                   value={value}
                   onChangeText={onChange}
                   keyboardType={getKeyboardType(field.type)}
