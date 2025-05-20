@@ -204,21 +204,21 @@ export default function CallingScreen() {
       const payload =
         selectedGroup === null
           ? {
-              userId: Number(user?.id),
-              contacts: validContacts.map(contact => ({
-                name: contact.name,
-                phoneNumber: contact.phoneNumber,
-              })),
-              groupId: 0,
-              groupType: 'MANUAL',
-              messageContent,
-            }
+            userId: Number(user?.id),
+            contacts: validContacts.map(contact => ({
+              name: contact.name,
+              phoneNumber: contact.phoneNumber,
+            })),
+            groupId: 0,
+            groupType: 'MANUAL',
+            messageContent,
+          }
           : {
-              userId: Number(user?.id),
-              groupId: Number(selectedGroup),
-              groupType: 'USER_DEFINED',
-              messageContent,
-            };
+            userId: Number(user?.id),
+            groupId: Number(selectedGroup),
+            groupType: 'USER_DEFINED',
+            messageContent,
+          };
 
       const response: any = await StartCallSession(payload);
       if (response.statusCode !== 200) {
@@ -361,13 +361,12 @@ export default function CallingScreen() {
                       <Text className="text-sm text-gray-500">{contact.phoneNumber}</Text>
                     </View>
                     <Text
-                      className={`text-sm ${
-                        status === 'ACCEPTED'
-                          ? 'text-green-500'
-                          : status === 'FAILED' || status === 'DECLINED'
+                      className={`text-sm ${status === 'ACCEPTED'
+                        ? 'text-green-500'
+                        : status === 'FAILED' || status === 'DECLINED'
                           ? 'text-red-500'
                           : 'text-gray-500'
-                      }`}
+                        }`}
                     >
                       {getStatusDisplay(status, historyEntry?.attempt || 1)}
                     </Text>
@@ -389,7 +388,6 @@ export default function CallingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
-      <StatusBar barStyle="dark-content" />
       <View className="px-5 pt-6 pb-4">
         <View className="flex-row items-center justify-between mb-1">
           <View className="flex-row items-center">
@@ -414,9 +412,8 @@ export default function CallingScreen() {
             ) : fetchedGroups?.data?.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
                 <TouchableOpacity
-                  className={`mr-3 py-2 px-4 rounded-lg ${
-                    selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
-                  }`}
+                  className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === null ? 'bg-secondary' : 'bg-tertiary'
+                    }`}
                   onPress={() => handleGroupSelect(null)}
                 >
                   <Text className={selectedGroup === null ? 'text-white' : 'text-text-primary'}>
@@ -426,9 +423,8 @@ export default function CallingScreen() {
                 {fetchedGroups.data.map((group: Group) => (
                   <TouchableOpacity
                     key={group.id}
-                    className={`mr-3 py-2 px-4 rounded-lg ${
-                      selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
-                    }`}
+                    className={`mr-3 py-2 px-4 rounded-lg ${selectedGroup === group.id ? 'bg-secondary' : 'bg-tertiary'
+                      }`}
                     onPress={() => handleGroupSelect(group.id)}
                   >
                     <Text className={selectedGroup === group.id ? 'text-white' : 'text-gray-700'}>
@@ -510,9 +506,8 @@ export default function CallingScreen() {
               )}
             </View>
             <TouchableOpacity
-              className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${
-                isRecording ? 'bg-error/10' : ''
-              } ${!user?.is_premium ? 'opacity-50' : ''}`}
+              className={`bg-gray-50 p-4 rounded-lg flex-row items-center justify-between ${isRecording ? 'bg-error/10' : ''
+                } ${!user?.is_premium ? 'opacity-50' : ''}`}
               onPress={handleRecordMessage}
               disabled={!user?.is_premium}
             >
@@ -521,8 +516,8 @@ export default function CallingScreen() {
                   {isRecording
                     ? 'Recording...'
                     : recordedMessage
-                    ? 'Re-record Message'
-                    : 'Record Voice Message'}
+                      ? 'Re-record Message'
+                      : 'Record Voice Message'}
                 </Text>
                 {!user?.is_premium && (
                   <Text className="mt-1 text-sm text-gray-500">
@@ -539,9 +534,8 @@ export default function CallingScreen() {
             )}
           </View>
           <TouchableOpacity
-            className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${
-              selectedContacts.length === 0 ? 'opacity-50' : ''
-            }`}
+            className={`bg-primary rounded-lg py-3 items-center my-4 shadow-lg ${selectedContacts.length === 0 ? 'opacity-50' : ''
+              }`}
             onPress={handleStartCall}
             disabled={selectedContacts.length === 0}
           >
