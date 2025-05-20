@@ -57,7 +57,7 @@ const PasswordInput: React.FC<{
   return (
     <View className="relative">
       <TextInput
-        className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary "
+        className="p-4 pr-10 border border-gray-300 rounded-lg bg-background-primary text-text-primary"
         placeholder={placeholder}
         placeholderTextColor={placeholderColor}
         value={value}

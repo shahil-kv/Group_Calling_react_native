@@ -5,6 +5,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        'custom-purple': '#6C5CE7',
+        'custom-teal': '#00CEC9',
+        'custom-red': '#FF7675',
         // Primary: Updated to match StatusCard primary color (#4F46E5 - indigo)
         primary: "var(--color-primary)",
         // Secondary: Updated to match StatusCard secondary color (#8B5CF6 - purple)
@@ -86,7 +89,7 @@ module.exports = {
           '--color-info': '#3B82F6',             // Blue 500 - from StatusCard primary/info
           '--color-neutral': '#64748B',          // Slate 500
           '--color-background-primary': '#fafafa',       // Slate 100
-          '--color-background-secondary': '#E0E8F0', // Slate 200
+          '--color-background-secondary': '#f3f3f3', // Slate 200
           '--color-surface': '#FFFFFF',          // White
           '--color-text': '#0F172A',             // Slate 900
           '--color-text-secondary': '#475569',   // Slate 600

@@ -351,10 +351,10 @@ export default function CallingScreen() {
                     </View>
                     <Text
                       className={`text-sm ${status === 'ACCEPTED'
-                          ? 'text-green-500'
-                          : status === 'FAILED' || status === 'DECLINED'
-                            ? 'text-red-500'
-                            : 'text-gray-500'
+                        ? 'text-green-500'
+                        : status === 'FAILED' || status === 'DECLINED'
+                          ? 'text-red-500'
+                          : 'text-gray-500'
                         }`}
                     >
                       {getStatusDisplay(status, historyEntry?.attempt || 1)}
@@ -377,7 +377,6 @@ export default function CallingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gradient-to-b from-blue-50 to-white" edges={['top']}>
-      <StatusBar barStyle="dark-content" />
       <View className="px-5 pt-6 pb-4">
         <View className="flex-row items-center justify-between mb-1">
           <View className="flex-row items-center">
