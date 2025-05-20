@@ -170,8 +170,8 @@ export default function AnalyticsScreen() {
                             />
                         </View>
 
-                        <View className='p-4 mx-4 mb-4 bg-white shadow-sm rounded-xl shadow-black/5'>
-                            <Text className='mb-4 text-lg font-semibold'>Call Volume by Hour</Text>
+                        <View className='p-4 mx-4 mb-4 shadow-sm bg-background-secondary rounded-xl shadow-black/5'>
+                            <Text className='mb-4 text-lg font-semibold text-text-primary'>Call Volume by Hour</Text>
                             <BarChart
                                 data={analyticsData.callVolumeByHour}
                                 width={Dimensions.get('window').width - 40}
@@ -179,8 +179,8 @@ export default function AnalyticsScreen() {
                             />
                         </View>
 
-                        <View className='p-4 mx-4 mb-4 bg-white shadow-sm rounded-xl shadow-black/5'>
-                            <Text className='mb-4 text-lg font-semibold'>Day of Week Performance</Text>
+                        <View className='p-4 mx-4 mb-4 shadow-sm bg-background-secondary rounded-xl shadow-black/5'>
+                            <Text className='mb-4 text-lg font-semibold text-text-primary'>Day of Week Performance</Text>
                             <BarChart
                                 data={analyticsData.dayOfWeekPerformance}
                                 width={Dimensions.get('window').width - 40}
@@ -207,8 +207,8 @@ export default function AnalyticsScreen() {
                             />
                         </View>
 
-                        <View className='p-4 mx-4 mb-4 bg-white shadow-sm rounded-xl shadow-black/5'>
-                            <Text className='mb-4 text-lg font-semibold'>Top Performing Groups</Text>
+                        <View className='p-4 mx-4 mb-4 shadow-sm bg-background-secondary rounded-xl shadow-black/5'>
+                            <Text className='mb-4 text-lg font-semibold text-text-primary'>Top Performing Groups</Text>
                             {analyticsData.topGroups.map((group) => (
                                 <GroupPerformanceCard
                                     key={group.id}
@@ -218,20 +218,20 @@ export default function AnalyticsScreen() {
                             ))}
                         </View>
 
-                        <View className='p-4 mx-4 mb-4 bg-white shadow-sm rounded-xl shadow-black/5'>
-                            <Text className='mb-4 text-lg font-semibold'>User Response Distribution</Text>
+                        <View className='p-4 mx-4 mb-4 shadow-sm bg-background-secondary rounded-xl shadow-black/5'>
+                            <Text className='mb-4 text-lg font-semibold text-text-primary'>User Response Distribution</Text>
                             <View className='flex flex-row justify-around py-4'>
                                 <View className='items-center text-center'>
-                                    <Text className='text-2xl font-bold text-[#6C5CE7] mb-1'>{analyticsData.responseDistribution.pressed1}%</Text>
-                                    <Text className='text-sm text-[#666]'>Pressed "1"</Text>
+                                    <Text className='mb-1 text-2xl font-bold text-primary'>{analyticsData.responseDistribution.pressed1}%</Text>
+                                    <Text className='text-sm text-secondary'>Pressed "1"</Text>
                                 </View>
                                 <View className='items-center text-center'>
-                                    <Text className='text-2xl font-bold text-[#6C5CE7] mb-1'>{analyticsData.responseDistribution.pressed2}%</Text>
-                                    <Text className='text-sm text-[#666]'>Pressed "2"</Text>
+                                    <Text className='mb-1 text-2xl font-bold text-primary'>{analyticsData.responseDistribution.pressed2}%</Text>
+                                    <Text className='text-sm text-secondary'>Pressed "2"</Text>
                                 </View>
                                 <View className='items-center text-center'>
-                                    <Text className='text-2xl font-bold text-[#6C5CE7] mb-1'>{analyticsData.responseDistribution.other}%</Text>
-                                    <Text className='text-sm text-[#666]'>Other</Text>
+                                    <Text className='mb-1 text-2xl font-bold text-primary'>{analyticsData.responseDistribution.other}%</Text>
+                                    <Text className='text-sm text-secondary'>Other</Text>
                                 </View>
                             </View>
                         </View>

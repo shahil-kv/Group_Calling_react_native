@@ -78,8 +78,8 @@ export const GroupPerformanceCard = ({ group, onPress }: GroupPerformanceCardPro
             onPress={onPress}
         >
             <View className="flex-1">
-                <Text className="mb-1 text-base font-semibold">{group.name}</Text>
-                <Text className="text-sm text-gray-500">
+                <Text className="mb-1 text-base font-semibold text-text-primary">{group.name}</Text>
+                <Text className="text-sm text-text-secondary">
                     {group.callCount} calls • {group.engagementRate}% engagement
                 </Text>
             </View>

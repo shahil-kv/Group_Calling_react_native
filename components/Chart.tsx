@@ -58,7 +58,7 @@ type PieChartProps = {
 };
 
 export const PieChart = memo(({ data, size = 200 }: PieChartProps) => {
-    const colorScheme = useColorScheme(); // ✅ Moved inside the component
+    const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const textColor = isDark ? '#CBD5E1' : '#4F46E5';
 
@@ -78,6 +78,7 @@ export const PieChart = memo(({ data, size = 200 }: PieChartProps) => {
                 labelLineConfig={{
                     color: textColor,
                 }}
+                backgroundColor='transparent'
                 radius={size / 2}
                 innerRadius={size / 2 - size * 0.2}
                 donut
