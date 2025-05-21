@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet } from '@/hooks/useApi';
 import { ApiResponse } from '@/types/authContext';
-import { CallHistoryItem, GroupItem } from '@/types/report.type';
+import { CallHistoryItem, GroupItem, LIST_CONFIG } from '@/types/report.type';
+import { formatDateTime } from '@/utils/formatDateTime';
 import { router } from 'expo-router'; // Use router instead of useNavigation
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -14,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
+import { EmptyState } from './EmptyState';
+import { StatusBadge } from './StatusBadge';
 
 const History = () => {
   const [selectedView, setSelectedView] = useState<'All' | 'Groups'>('Groups');
@@ -33,47 +36,26 @@ const History = () => {
     { showErrorToast: true, showSuccessToast: false, showLoader: false }
   );
 
-  const handleRefresh = useCallback(() => {
+  // Handlers
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    historyRefetch().then(() => {
-      setIsRefreshing(false);
-    });
+    await historyRefetch();
+    setIsRefreshing(false);
   }, [historyRefetch]);
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  const getStatusStyle = (status: string) => {
-    let statusString = status ? status.toUpperCase() : 'IN_PROGRESS';
-
-    switch (statusString) {
-      case 'ACCEPTED':
-        return { color: 'text-success', bgColor: 'bg-success/20', icon: 'phone' };
-      case 'FAILED':
-      case 'MISSED':
-        return { color: 'text-danger', bgColor: 'bg-success/20', icon: 'times-circle' };
-      case 'IN_PROGRESS':
-        return { color: 'text-warning', bgColor: 'bg-warning/20', icon: 'clock' };
-      case 'VOICEMAIL':
-        return { color: 'text-info', bgColor: 'bg-info/20', icon: 'envelope' };
-      default:
-        return { color: 'text-gray', bgColor: 'bg-gray/20', icon: 'question-circle' };
-    }
-  };
-
-  const handleGroupPress = (group: GroupItem) => {
+  const handleGroupPress = useCallback((group: GroupItem) => {
     router.push(`/sessions/${group.id}`);
-  };
+  }, []);
 
+  const toggleView = useCallback(() => {
+    setSelectedView(prev => (prev === 'Groups' ? 'All' : 'Groups'));
+  }, []);
+
+  const formatDuration = useCallback((duration: number | undefined) => {
+    if (!duration) return 'N/A';
+    return `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
+  }, []);
+  // Render Functions
   const renderItem = useCallback(
     ({ item }: { item: CallHistoryItem | GroupItem }) => {
       if (selectedView === 'Groups') {
@@ -83,12 +65,16 @@ const History = () => {
             onPress={() => handleGroupPress(group)}
             className="bg-background-secondary rounded-xl my-2 p-4 shadow-sm"
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`View group ${group.group_name}`}
           >
             <View className="flex-row justify-between items-center">
               <View className="flex-1 pr-3">
                 <Text className="text-lg font-semibold text-text-primary">{group.group_name}</Text>
-                <Text className="text-sm text-gray mt-1">{group.description}</Text>
-                <Text className="text-xs text-gray mt-1">
+                <Text className="text-sm text-gray-500 mt-1">
+                  {group.description || 'No description'}
+                </Text>
+                <Text className="text-xs text-gray-500 mt-1">
                   Created at: {formatDateTime(group.created_at)}
                 </Text>
               </View>
@@ -99,44 +85,35 @@ const History = () => {
       }
 
       const history = item as CallHistoryItem;
-      const { color, bgColor, icon } = getStatusStyle(history.status);
-      const callTime = formatDateTime(history.called_at);
-      const duration = history.duration
-        ? `${Math.floor(history.duration / 60)}:${(history.duration % 60)
-            .toString()
-            .padStart(2, '0')}`
-        : 'N/A';
-
       return (
         <View className="bg-background-secondary rounded-xl my-2 p-4 shadow-sm">
           <View className="flex-row justify-between items-center mb-3">
             <View className="flex-row items-center">
-              <Icon name="user-circle" size={24} />
+              <Icon name="user-circle" size={24} color="#1E3A8A" />
               <Text className="text-base font-semibold text-text-primary ml-2">
                 {history.contact_phone}
               </Text>
             </View>
-            <View className={`flex-row items-center px-2 py-1 rounded-full ${bgColor}`}>
-              <Icon name={icon} size={16} />
-              <Text className={`text-sm font-medium uppercase ml-2 ${color}`}>
-                {history.status}
-              </Text>
-            </View>
+            <StatusBadge status={history.status} />
           </View>
           <View className="border-t border-gray-200 pt-3">
-            <Text className="text-sm text-text-primary">Called At: {callTime}</Text>
-            <Text className="text-sm text-text-primary">Duration: {duration}</Text>
+            <Text className="text-sm text-text-primary">
+              Called At: {formatDateTime(history.called_at)}
+            </Text>
+            <Text className="text-sm text-text-primary">
+              Duration: {formatDuration(history.duration || 0)}
+            </Text>
             {history.error_message && (
               <Text className="text-sm text-danger mt-1">Error: {history.error_message}</Text>
             )}
             <Text className="text-sm text-text-primary mt-1">
-              Message: {history.message_content}
+              Message: {history.message_content || 'N/A'}
             </Text>
           </View>
         </View>
       );
     },
-    [selectedView]
+    [selectedView, handleGroupPress, formatDuration]
   );
 
   return (
@@ -155,25 +132,20 @@ const History = () => {
       </View>
 
       <FlatList
-        data={historyData?.data || []}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        keyExtractor={item => `${selectedView}-${(item as any).id}`}
+        data={historyData?.data}
+        {...LIST_CONFIG}
+        keyExtractor={item => `${selectedView}-${item.id}`}
         renderItem={renderItem}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={
-          isHistoryFetching ? (
-            <Text className="text-center text-gray mt-5 text-base">Loading...</Text>
-          ) : historyError ? (
-            <Text className="text-center text-danger mt-5 text-base">
-              Error loading call history
-            </Text>
-          ) : (
-            <Text className="text-center text-gray mt-5 text-base">No data available</Text>
-          )
+          <EmptyState
+            isLoading={isHistoryFetching}
+            error={historyError}
+            emptyMessage="No data available"
+          />
         }
+        accessibilityLabel={`${selectedView} history list`}
       />
     </SafeAreaView>
   );
