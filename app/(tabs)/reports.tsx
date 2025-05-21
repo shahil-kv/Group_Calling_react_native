@@ -28,7 +28,7 @@ const enum Tabs {
 }
 
 export default function AnalyticsScreen() {
-  const [activeTab, setActiveTab] = useState(Tabs.History);
+  const [activeTab, setActiveTab] = useState(Tabs.Overview);
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'left', 'right']}>
       <View className="px-4 pt-4 pb-2">
@@ -39,14 +39,14 @@ export default function AnalyticsScreen() {
       </View>
       <View className="flex-row justify-between p-1 mx-4 my-2 rounded-lg bg-background-secondary">
         <TabButton
-          title={Tabs.History}
-          active={activeTab === Tabs.History}
-          onPress={() => setActiveTab(Tabs.History)}
-        />
-        <TabButton
           title={Tabs.Overview}
           active={activeTab === Tabs.Overview}
           onPress={() => setActiveTab(Tabs.Overview)}
+        />
+        <TabButton
+          title={Tabs.History}
+          active={activeTab === Tabs.History}
+          onPress={() => setActiveTab(Tabs.History)}
         />
       </View>
       {activeTab === Tabs.Overview ? <OverView /> : <History />}

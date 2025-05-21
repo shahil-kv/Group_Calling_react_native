@@ -1,33 +1,82 @@
-import React from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGet } from '@/hooks/useApi';
+import React, { useMemo } from 'react';
+import { Dimensions, ScrollView, Text, View } from 'react-native'; // Added ScrollView
 import { BarChart, PieChart } from './Chart';
 import { AnalyticCard } from './ReportsCard';
 
-const OverView = ({ analyticsData }: any) => {
+interface OverviewData {
+  statusCode: number;
+  data: {
+    overview: {
+      totalCalls: number;
+      callsChangePercent: number;
+      totalRecipients: number;
+      recipientsChangePercent: number;
+    };
+    weeklyActivity: {
+      label: string;
+      value: number;
+    }[];
+    callStatus: {
+      answered: number;
+      failed: number;
+      missed: number;
+    };
+  };
+  message: string;
+}
+
+const OverView = () => {
+  const { user } = useAuth();
+  const stableUserId = useMemo(() => (user?.id != null ? Number(user.id) : 0), [user?.id]);
+
+  const {
+    data: analyticsData,
+    isLoading,
+    error,
+  } = useGet<{ data: OverviewData }>(
+    'report/getOverview',
+    { userId: stableUserId },
+    {
+      showErrorToast: true,
+      showSuccessToast: false,
+      showLoader: true,
+      enabled: stableUserId > 0,
+    }
+  );
+
+  const { overview, weeklyActivity, callStatus } = analyticsData?.data as any;
+
+  // Check if data is truly unavailable
+  if (!overview || !weeklyActivity || !callStatus) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-text-primary">No data available</Text>
+      </View>
+    );
+  }
+
   return (
-    <>
+    <ScrollView className="flex-1">
       <View className="flex-row justify-between px-4">
         <AnalyticCard
           title="Total Calls"
-          value={analyticsData.overview.totalCalls}
-          changePercent={analyticsData.overview.callsChangePercent}
+          value={overview.totalCalls}
+          changePercent={overview.callsChangePercent}
           period="from last month"
         />
         <AnalyticCard
           title="Total Recipients"
-          value={analyticsData.overview.totalRecipients}
-          changePercent={analyticsData.overview.recipientsChangePercent}
+          value={overview.totalRecipients}
+          changePercent={overview.recipientsChangePercent}
           period="from last month"
         />
       </View>
 
       <View className="p-4 mx-4 my-4 shadow-sm bg-background-secondary rounded-xl shadow-black/5">
         <Text className="mb-4 text-lg font-semibold text-text-primary">Weekly Activity</Text>
-        <BarChart
-          data={analyticsData.weeklyActivity}
-          width={Dimensions.get('window').width - 40}
-          height={200}
-        />
+        <BarChart data={weeklyActivity} width={Dimensions.get('window').width - 40} height={200} />
       </View>
 
       <View className="p-4 mx-4 my-4 rounded-lg shadow-sm h-min bg-background-secondary">
@@ -36,41 +85,41 @@ const OverView = ({ analyticsData }: any) => {
           <PieChart
             data={[
               {
-                value: analyticsData.callStatus.answered,
+                value: callStatus.answered,
                 color: '#6C5CE7',
                 label: 'Answered',
               },
               {
-                value: analyticsData.callStatus.voicemail,
+                value: callStatus.failed,
                 color: '#00CEC9',
-                label: 'Voicemail',
+                label: 'Failed',
               },
-              { value: analyticsData.callStatus.missed, color: '#FF7675', label: 'Missed' },
+              {
+                value: callStatus.missed,
+                color: '#FF7675',
+                label: 'Missed',
+              },
             ]}
           />
           <View className="ml-4">
             <View className="flex-row items-center justify-center mb-2">
               <View className="w-4 h-4 mr-2 rounded-full bg-violet-600" />
-              <Text className="text-sm text-text-secondary">
-                Answered: {analyticsData.callStatus.answered}%
-              </Text>
+              <Text className="text-sm text-text-secondary">Answered: {callStatus.answered}%</Text>
             </View>
             <View className="flex-row items-center justify-center mb-2">
               <View className="w-4 h-4 mr-2 rounded-full bg-cyan-400" />
-              <Text className="text-sm text-text-secondary">
-                Voicemail: {analyticsData.callStatus.voicemail}%
-              </Text>
+              <Text className="text-sm text-text-secondary">Failed: {callStatus.failed}%</Text>
             </View>
             <View className="flex-row items-center justify-center mb-2">
               <View className="w-4 h-4 mr-2 rounded-full bg-rose-400" />
-              <Text className="text-sm text-text-secondary">
-                Missed: {analyticsData.callStatus.missed}%
-              </Text>
+              <Text className="text-sm text-text-secondary">Missed: {callStatus.missed}%</Text>
             </View>
           </View>
         </View>
       </View>
-    </>
+      {/* Add some padding at the bottom to ensure content isn't cut off */}
+      <View className="h-4" />
+    </ScrollView>
   );
 };
 

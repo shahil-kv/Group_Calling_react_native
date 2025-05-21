@@ -10,6 +10,29 @@ interface CallSession {
     updated_at: string;
 }
 
+interface OverviewData {
+    statusCode: number;
+    data: {
+        overview: {
+            totalCalls: number;
+            callsChangePercent: number;
+            totalRecipients: number;
+            recipientsChangePercent: number;
+        };
+        weeklyActivity: {
+            day: string;
+            count: number;
+        }[];
+        callStatus: {
+            answered: number;
+            voicemail: number;
+            missed: number;
+        };
+    };
+    message: string;
+}
+
+
 export const LIST_CONFIG = {
     INITIAL_NUM_TO_RENDER: 10,
     MAX_TO_RENDER_PER_BATCH: 10,
@@ -47,4 +70,4 @@ interface GroupItem {
     updated_at: string;
 }
 
-export type { CallHistoryItem, CallSession, GroupItem };
+export type { CallHistoryItem, CallSession, GroupItem, OverviewData };
