@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 const SessionsScreen = () => {
   const { user } = useAuth();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const stableUserId = useMemo(() => (user?.id != null ? String(user.id) : undefined), [user?.id]);
+  const stableUserId = useMemo(() => (user?.id != null ? Number(user.id) : 0), [user?.id]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [sessionId, setSessionId] = useState<number>(0);
   const [isRefresh, setIsRefreshing] = useState(false);
@@ -32,6 +32,7 @@ const SessionsScreen = () => {
       showErrorToast: true,
       showSuccessToast: false,
       showLoader: true,
+      enabled: !!groupId && stableUserId > 0,
     }
   );
 
@@ -40,11 +41,17 @@ const SessionsScreen = () => {
     refetch: contactsRefetch,
     isFetching: isContactsRefetch,
     error: contactsError,
-  } = useGet<ApiResponse<CallHistoryItem[]>, { userId: string | undefined; sessionId: number }>(
+  } = useGet<ApiResponse<CallHistoryItem[]>, { userId: number; sessionId: number }>(
     'report/contacts',
     { sessionId, userId: stableUserId },
-    { showErrorToast: true, showSuccessToast: false, showLoader: false }
-  ); // Handlers
+    {
+      showErrorToast: true,
+      showSuccessToast: false,
+      showLoader: false,
+      enabled: sessionId > 0 && stableUserId > 0,
+    }
+  );
+  // Handlers
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await contactsRefetch();

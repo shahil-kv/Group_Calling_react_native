@@ -47,10 +47,6 @@ const History = () => {
     router.push(`/sessions/${group.id}`);
   }, []);
 
-  const toggleView = useCallback(() => {
-    setSelectedView(prev => (prev === 'Groups' ? 'All' : 'Groups'));
-  }, []);
-
   const formatDuration = useCallback((duration: number | undefined) => {
     if (!duration) return 'N/A';
     return `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;

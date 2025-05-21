@@ -110,15 +110,17 @@ export const usePost = <TData = unknown, TVariables = unknown>(
  *   showLoader: true
  * });
  */
-export const useGet = <TData = any, TVariables extends { userId?: string } = any>(
+export const useGet = <TData = any, TVariables extends { userId?: string | number; sessionId?: number } = any>(
     endpoint: string,
     variables?: TVariables,
-    config?: MutationConfig
+    config: MutationConfig = {}
 ) => {
     const toast = useToast();
     const { showLoader, hideLoader } = useLoader();
-    const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true } = config || {};
+    const { showSuccessToast = false, showErrorToast = true, showLoader: shouldShowLoader = true, enabled = true } =
+        config;
 
+    // Only evaluate userId and sessionId checks if the custom enabled condition is true
     return useQuery({
         queryKey: [endpoint, variables], // Unique key for this query
         queryFn: async () => {
@@ -143,7 +145,7 @@ export const useGet = <TData = any, TVariables extends { userId?: string } = any
                 }
             }
         },
-        enabled: !!variables?.userId, // Only fetch if userId is truthy
+        enabled: enabled, // Custom enabled takes precedence
     });
 };
 
