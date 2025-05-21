@@ -16,6 +16,7 @@ type MutationConfig = {
     showSuccessToast?: boolean;
     showErrorToast?: boolean;
     showLoader?: boolean;
+    enabled?: boolean;
 };
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {

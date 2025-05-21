@@ -41,14 +41,11 @@ const StatusBarWithTheme = () => {
           right: 0,
           height: Constants.statusBarHeight,
           backgroundColor: backgroundColor,
-          zIndex: 1
+          zIndex: 1,
         }}
       />
       {/* Status bar with transparent background */}
-      <StatusBar
-        style={theme === 'dark' ? 'light' : 'dark'}
-        translucent={true}
-      />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} translucent={true} />
     </>
   );
 };
@@ -112,9 +109,10 @@ export default function RootLayout() {
         Toast.show({
           type: 'error',
           text1: 'Storage Error',
-          text2: Platform.OS === 'android'
-            ? 'Please clear app data and restart the app'
-            : 'Failed to initialize app storage. Please restart the app.',
+          text2:
+            Platform.OS === 'android'
+              ? 'Please clear app data and restart the app'
+              : 'Failed to initialize app storage. Please restart the app.',
         });
       }
     };
@@ -160,6 +158,8 @@ export default function RootLayout() {
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" />
+                {/* Additional screens outside the tab layout */}
+                <Stack.Screen name="sessions/[groupId]" options={{ headerShown: false }} />
               </Stack>
               <Toast />
             </AuthProvider>
