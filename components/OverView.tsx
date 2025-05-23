@@ -1,41 +1,16 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useGet } from '@/hooks/useApi';
+import { OverviewData } from '@/types/report.type';
 import React, { useMemo } from 'react';
-import { Dimensions, ScrollView, Text, View } from 'react-native'; // Added ScrollView
+import { Dimensions, ScrollView, Text, View } from 'react-native';
 import { BarChart, PieChart } from './Chart';
 import { AnalyticCard } from './ReportsCard';
 
-interface OverviewData {
-  statusCode: number;
-  data: {
-    overview: {
-      totalCalls: number;
-      callsChangePercent: number;
-      totalRecipients: number;
-      recipientsChangePercent: number;
-    };
-    weeklyActivity: {
-      label: string;
-      value: number;
-    }[];
-    callStatus: {
-      answered: number;
-      failed: number;
-      missed: number;
-    };
-  };
-  message: string;
-}
-
 const OverView = () => {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const stableUserId = useMemo(() => (user?.id != null ? Number(user.id) : 0), [user?.id]);
 
-  const {
-    data: analyticsData,
-    isLoading,
-    error,
-  } = useGet<{ data: OverviewData }>(
+  const { data: analyticsData } = useGet<{ data: OverviewData }>(
     'report/getOverview',
     { userId: stableUserId },
     {
@@ -46,16 +21,15 @@ const OverView = () => {
     }
   );
 
-  const { overview, weeklyActivity, callStatus } = analyticsData?.data as any;
-
-  // Check if data is truly unavailable
-  if (!overview || !weeklyActivity || !callStatus) {
+  if (!analyticsData?.data) {
     return (
       <View className="flex-1 justify-center items-center">
         <Text className="text-text-primary">No data available</Text>
       </View>
     );
   }
+
+  const { overview, weeklyActivity, callStatus } = analyticsData.data as any;
 
   return (
     <ScrollView className="flex-1">
@@ -84,21 +58,9 @@ const OverView = () => {
         <View className="flex-col">
           <PieChart
             data={[
-              {
-                value: callStatus.answered,
-                color: '#6C5CE7',
-                label: 'Answered',
-              },
-              {
-                value: callStatus.failed,
-                color: '#00CEC9',
-                label: 'Failed',
-              },
-              {
-                value: callStatus.missed,
-                color: '#FF7675',
-                label: 'Missed',
-              },
+              { value: callStatus.answered, color: '#6C5CE7', label: 'Answered' },
+              { value: callStatus.failed, color: '#00CEC9', label: 'Failed' },
+              { value: callStatus.missed, color: '#FF7675', label: 'Missed' },
             ]}
           />
           <View className="ml-4">
@@ -117,7 +79,6 @@ const OverView = () => {
           </View>
         </View>
       </View>
-      {/* Add some padding at the bottom to ensure content isn't cut off */}
       <View className="h-4" />
     </ScrollView>
   );

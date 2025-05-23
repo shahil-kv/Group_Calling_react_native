@@ -35,68 +35,6 @@ const History = () => {
     { selectedView, userId: stableUserId },
     { showErrorToast: true, showSuccessToast: false, showLoader: false }
   );
-  const renderTabContent = () => {
-    const analyticsData = {
-      overview: {
-        totalCalls: 29,
-        callsChangePercent: 12,
-        totalRecipients: 143,
-        recipientsChangePercent: 8,
-      },
-      weeklyActivity: [
-        { label: 'Mon', value: 45, color: '#6C5CE7' },
-        { label: 'Tue', value: 87, color: '#6C5CE7' },
-        { label: 'Wed', value: 32, color: '#6C5CE7' },
-        { label: 'Thu', value: 76, color: '#6C5CE7' },
-        { label: 'Fri', value: 24, color: '#6C5CE7' },
-        { label: 'Sat', value: 11, color: '#6C5CE7' },
-        { label: 'Sun', value: 38, color: '#6C5CE7' },
-      ],
-      callStatus: {
-        answered: 65,
-        voicemail: 25,
-        missed: 10,
-      },
-      activity: {
-        avgCallDuration: 42,
-        durationChangePercent: 5,
-        busiestTimeOfDay: '2-4 PM',
-      },
-      callVolumeByHour: [
-        { label: '8am', value: 12, color: '#6C5CE7' },
-        { label: '10am', value: 28, color: '#6C5CE7' },
-        { label: '12pm', value: 18, color: '#6C5CE7' },
-        { label: '2pm', value: 48, color: '#6C5CE7' },
-        { label: '4pm', value: 36, color: '#6C5CE7' },
-        { label: '6pm', value: 14, color: '#6C5CE7' },
-      ],
-      dayOfWeekPerformance: [
-        { label: 'Mon', value: 62, color: '#6C5CE7' },
-        { label: 'Tue', value: 78, color: '#6C5CE7' },
-        { label: 'Wed', value: 54, color: '#6C5CE7' },
-        { label: 'Thu', value: 69, color: '#6C5CE7' },
-        { label: 'Fri', value: 42, color: '#6C5CE7' },
-        { label: 'Sat', value: 18, color: '#6C5CE7' },
-        { label: 'Sun', value: 25, color: '#6C5CE7' },
-      ],
-      engagement: {
-        overallRate: 72,
-        rateChangePercent: 4,
-        keypressRate: '56%',
-        keypressChangePercent: 7,
-      },
-      topGroups: [
-        { id: 1, name: 'Sales Leads', engagementRate: 84, callCount: 56 },
-        { id: 2, name: 'Support Team', engagementRate: 76, callCount: 42 },
-        { id: 3, name: 'Marketing', engagementRate: 68, callCount: 37 },
-      ],
-      responseDistribution: {
-        pressed1: 56,
-        pressed2: 32,
-        other: 12,
-      },
-    };
-  };
   // Handlers
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
