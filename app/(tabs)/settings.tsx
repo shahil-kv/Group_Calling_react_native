@@ -1,18 +1,10 @@
-import { router } from 'expo-router';
 import 'nativewind';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import { Alert, Modal, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Header from '../../components/Header';
 import SettingsItem from '../../components/SettingsItem';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen() {
@@ -20,6 +12,7 @@ export default function SettingsScreen() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { signOut } = useAuth(); // Use the signOut function from AuthContext
 
   const handleUpgrade = () => {
     Alert.alert('Upgrade to Pro', 'Choose your subscription plan:', [
@@ -51,8 +44,13 @@ export default function SettingsScreen() {
       {
         text: 'Log Out',
         style: 'destructive',
-        onPress: () => {
-          router.replace('/login');
+        onPress: async () => {
+          try {
+            await signOut(); // Call signOut from AuthContext
+          } catch (error) {
+            console.error('Logout failed:', error);
+            Alert.alert('Error', 'Failed to log out. Please try again.');
+          }
         },
       },
     ]);
@@ -97,14 +95,14 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* Appearance Section (New) */}
+          {/* Appearance Section */}
           <View className="p-5 mb-6 shadow-sm bg-background-secondary rounded-xl">
             <Text className="mb-4 text-lg font-semibold text-text-secondary">Appearance</Text>
             <SettingsItem
               label="Dark Mode"
               hasToggle={true}
               toggleValue={theme === 'dark'}
-              onToggleChange={(value) => setTheme(value ? 'dark' : 'light')}
+              onToggleChange={value => setTheme(value ? 'dark' : 'light')}
               showArrow={false}
             />
           </View>

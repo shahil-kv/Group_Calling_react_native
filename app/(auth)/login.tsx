@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import * as yup from 'yup';
 import Button from '../../components/Button';
@@ -45,8 +46,12 @@ export default function LoginScreen() {
     try {
       await signIn(data.phoneNumber, data.password);
       router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: error.message || 'Invalid phone number or password',
+      });
     }
   };
 
@@ -77,6 +82,8 @@ export default function LoginScreen() {
                 onPress={handleSubmit}
                 fullWidth
                 size="lg"
+                disabled={isLoading}
+                loading={isLoading}
               />
             )}
           />

@@ -1,7 +1,5 @@
-// SignupScreen.tsx
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Link, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,13 +14,14 @@ import * as yup from 'yup';
 import Button from '../../components/Button';
 import { DynamicForm } from '../../components/DynamicForm';
 import CustomOTPInput from '../../components/OTPInput';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 import { usePost } from '../../hooks/useApi';
 
 // Validation Schema
 const schema = yup.object({
   fullName: yup
     .string()
-    .max(20, 'Full name cannot exceed 10 characters')
+    .max(20, 'Full name cannot exceed 20 characters')
     .required('Full name is required'),
   gmail: yup.string().email('Invalid email address').required('Email is required'),
   phoneNumber: yup.string().required('Phone number is required'),
@@ -82,107 +81,68 @@ export default function SignupScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [isStorageReady, setIsStorageReady] = useState(false);
+  const [password, setPassword] = useState(''); // Store password for sign-in after OTP verification
+  const { signIn } = useAuth(); // Use signIn from AuthContext
 
-  // Check AsyncStorage readiness
-  useEffect(() => {
-    const checkStorage = async () => {
-      try {
-        await AsyncStorage.setItem('test', 'test');
-        const value = await AsyncStorage.getItem('test');
-        await AsyncStorage.removeItem('test');
-        if (value === 'test') {
-          setIsStorageReady(true);
-        }
-      } catch (error) {
-        console.error('Storage check failed:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Storage Error',
-          text2: 'Please restart the app',
-        });
-      }
-    };
-    checkStorage();
-  }, []);
-
-  const { mutateAsync: signup } = usePost('/user/register', {
+  const { mutateAsync: signup, isPending: isSignupLoading } = usePost('/user/register', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
     showLoader: true,
   });
 
-  const { mutateAsync: verifyOTP } = usePost('/user/verify-phone', {
+  const { mutateAsync: verifyOTP, isPending: isVerifyLoading } = usePost('/user/verify-phone', {
     invalidateQueriesOnSuccess: ['users', 'auth'],
     showErrorToast: true,
     showSuccessToast: true,
   });
 
   const onSubmit = async (data: FormData) => {
-    if (!isStorageReady) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please wait while we initialize the app',
-      });
-      return;
-    }
-
     try {
+      console.log('Initiating signup with data:', data);
       const payload = {
         ...data,
         opsMode: 'INSERT',
         role: 'USER',
       };
-      const result = await signup(payload);
+      await signup(payload);
 
       setPhoneNumber(data.phoneNumber);
+      setPassword(data.password); // Store password for sign-in after OTP verification
       setShowOTP(true);
-    } catch (error) {
+      console.log('Signup successful, showing OTP input');
+    } catch (error: any) {
       console.error('Signup process error:', error);
       Toast.show({
         type: 'error',
         text1: 'Signup Failed',
-        text2: 'Please try again',
+        text2: error.message || 'Please try again',
       });
     }
   };
 
   const handleOTPSubmit = async () => {
-    if (!isStorageReady) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please wait while we initialize the app',
-      });
-      return;
-    }
-
     try {
+      console.log('Verifying OTP for phone number:', phoneNumber);
       const phoneNumberCleaned = phoneNumber.replace(/\s+/g, '');
       await verifyOTP({
         phoneNumber: phoneNumberCleaned,
         otp,
       });
-      router.navigate('/(auth)/login');
-    } catch (error) {
+
+      // After OTP verification, sign the user in
+      console.log('OTP verified, signing in user...');
+      await signIn(phoneNumberCleaned, password);
+      // signIn will navigate to /tabs (as per AuthContext logic)
+    } catch (error: any) {
       console.error('OTP verification error:', error);
       Toast.show({
         type: 'error',
         text1: 'Verification Failed',
-        text2: 'Please try again',
+        text2: error.message || 'Please try again',
       });
     }
   };
-
-  if (!isStorageReady) {
-    return (
-      <View className="items-center justify-center flex-1 bg-background-primary">
-        <Text className="text-lg text-text-primary">Initializing app...</Text>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -207,13 +167,27 @@ export default function SignupScreen() {
               onSubmit={onSubmit}
               validationSchema={schema}
               renderButton={handleSubmit => (
-                <Button title="Sign Up" onPress={handleSubmit} fullWidth size="lg" />
+                <Button
+                  title="Sign Up"
+                  onPress={handleSubmit}
+                  fullWidth
+                  size="lg"
+                  disabled={isSignupLoading}
+                  loading={isSignupLoading}
+                />
               )}
             />
           ) : (
             <View className="space-y-4">
               <CustomOTPInput value={otp} onChange={setOtp} label="Enter OTP" />
-              <Button title="Verify OTP" onPress={handleOTPSubmit} fullWidth size="lg" />
+              <Button
+                title="Verify OTP"
+                onPress={handleOTPSubmit}
+                fullWidth
+                size="lg"
+                disabled={isVerifyLoading}
+                loading={isVerifyLoading}
+              />
             </View>
           )}
 

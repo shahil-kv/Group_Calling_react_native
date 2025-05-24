@@ -1,10 +1,10 @@
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LoaderProvider } from '../contexts/LoaderContext';
 import '../global.css';
+
 configureReanimatedLogger({ strict: false });
 
 declare global {
@@ -53,28 +54,26 @@ const StatusBarWithTheme = () => {
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Initialize AsyncStorage
+// Initialize SecureStore
 const initializeStorage = async () => {
   try {
-    // Clear any existing test data
-    await AsyncStorage.removeItem('test');
-
     // Test write
-    await AsyncStorage.setItem('test', 'test');
+    await SecureStore.setItemAsync('test', 'test');
 
     // Test read
-    const value = await AsyncStorage.getItem('test');
+    const value = await SecureStore.getItemAsync('test');
 
     // Test remove
-    await AsyncStorage.removeItem('test');
+    await SecureStore.deleteItemAsync('test');
 
     if (value !== 'test') {
       throw new Error('Storage verification failed');
     }
 
+    console.log('SecureStore initialized successfully');
     return true;
   } catch (error) {
-    console.error('AsyncStorage initialization failed:', error);
+    console.error('SecureStore initialization failed:', error);
     return false;
   }
 };
@@ -91,7 +90,7 @@ export default function RootLayout() {
     InterBold: Inter_700Bold,
   });
 
-  // Initialize AsyncStorage with retry mechanism
+  // Initialize SecureStore with retry mechanism
   useEffect(() => {
     const initStorageWithRetry = async (retryCount = 0) => {
       const maxRetries = 3;
@@ -100,7 +99,9 @@ export default function RootLayout() {
       if (success) {
         setIsStorageReady(true);
       } else if (retryCount < maxRetries) {
-        // Wait for 1 second before retrying
+        console.log(
+          `Retrying SecureStore initialization (attempt ${retryCount + 1}/${maxRetries})`
+        );
         setTimeout(() => {
           initStorageWithRetry(retryCount + 1);
         }, 1000);
@@ -114,6 +115,8 @@ export default function RootLayout() {
               ? 'Please clear app data and restart the app'
               : 'Failed to initialize app storage. Please restart the app.',
         });
+        // Proceed even if storage initialization fails to avoid being stuck
+        setIsStorageReady(true);
       }
     };
 
@@ -123,24 +126,39 @@ export default function RootLayout() {
   // Handle framework ready state
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.frameworkReady = () => setIsFrameworkReady(true);
+      window.frameworkReady = () => {
+        console.log('Framework ready');
+        setIsFrameworkReady(true);
+      };
     }
   }, []);
 
   // Hide splash screen once fonts are loaded and storage is ready
   useEffect(() => {
     if ((fontsLoaded || fontError) && isStorageReady) {
+      console.log(
+        'Hiding splash screen: fontsLoaded=',
+        fontsLoaded,
+        'fontError=',
+        fontError,
+        'isStorageReady=',
+        isStorageReady
+      );
       SplashScreen.hideAsync();
       setIsReady(true);
     }
   }, [fontsLoaded, fontError, isStorageReady]);
 
-  // Handle navigation after everything is ready
+  // Debug font loading issues
   useEffect(() => {
-    if (isReady && isFrameworkReady) {
-      router.replace('/(auth)/signup');
+    if (!fontsLoaded && !fontError) {
+      console.log('Fonts still loading...');
+    } else if (fontError) {
+      console.error('Font loading error:', fontError);
+    } else {
+      console.log('Fonts loaded successfully');
     }
-  }, [isReady, isFrameworkReady, router]);
+  }, [fontsLoaded, fontError]);
 
   // Return null to keep splash screen visible while fonts load
   if (!fontsLoaded && !fontError) {

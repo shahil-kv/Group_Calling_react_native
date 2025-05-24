@@ -4,13 +4,12 @@
  * @author System
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { AUTH_CONFIG } from '../config/auth.config';
 import { usePost } from '../hooks/useApi';
 import {
-  ApiResponse,
   AuthContextType,
   AuthTokens,
   LoginResponse,
@@ -18,7 +17,6 @@ import {
   RefreshTokenResponse,
   User,
 } from '../types/auth.types';
-import { api } from '../utils/api';
 import { useLoader } from './LoaderContext';
 
 /**
@@ -97,12 +95,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const loadStoredAuth = useCallback(async () => {
     try {
-      const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
-      const storedUserData = await AsyncStorage.getItem('user_data');
+      const storedRefreshToken = await SecureStore.getItemAsync('refresh_token');
+      const storedUserData = await SecureStore.getItemAsync('user_data');
 
       if (!storedRefreshToken) {
         setUser(null);
         setTokens(null);
+        console.log('No refresh token found, navigating to login');
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
         return;
       }
@@ -114,28 +113,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { tokens: newTokens } = response.data;
 
-        // Store new tokens
-        await AsyncStorage.setItem('access_token', newTokens.accessToken);
-        await AsyncStorage.setItem('refresh_token', newTokens.refreshToken);
+        const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+        await SecureStore.setItemAsync('access_token', newTokens.accessToken);
+        await SecureStore.setItemAsync('refresh_token', newTokens.refreshToken);
+        await SecureStore.setItemAsync('token_expiry', tokenExpiry.toISOString());
         setTokens(newTokens);
 
-        // Use stored user data if available
         if (storedUserData) {
           const userData = JSON.parse(storedUserData);
           setUser(userData);
+          console.log('User authenticated, navigating to tabs');
+          router.replace(AUTH_CONFIG.ROUTES.TABS);
         }
       } catch (error) {
         console.error('Token refresh failed:', error);
         setUser(null);
         setTokens(null);
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
+        await SecureStore.deleteItemAsync('access_token');
+        await SecureStore.deleteItemAsync('refresh_token');
+        await SecureStore.deleteItemAsync('token_expiry');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('user_data');
+        console.log('Token refresh failed, navigating to login');
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       }
     } catch (error: any) {
       console.error('Auth check failed:', error);
       setUser(null);
       setTokens(null);
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+      await SecureStore.deleteItemAsync('token_expiry');
+      await SecureStore.deleteItemAsync('userId');
+      await SecureStore.deleteItemAsync('user_data');
+      console.log('Auth check failed, navigating to login');
       router.replace(AUTH_CONFIG.ROUTES.LOGIN);
     } finally {
       setIsLoading(false);
@@ -152,12 +163,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    *
    * @flow
    * 1. Call login API with credentials
-   * 2. Store received tokens in AsyncStorage
+   * 2. Store received tokens in SecureStore
    * 3. Update user state and tokens
    * 4. Redirect to main app
    */
   const signIn = async (phoneNumber: string, password: string) => {
     try {
+      console.log('Attempting sign-in for:', phoneNumber);
       const response = await login({ phoneNumber, password });
 
       if (!response?.data) {
@@ -172,18 +184,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Missing user or tokens in login response');
       }
 
-      // Store tokens and user data
-      await AsyncStorage.setItem('access_token', newTokens.accessToken);
-      await AsyncStorage.setItem('refresh_token', newTokens.refreshToken);
-      await AsyncStorage.setItem('userId', user.id.toString());
-      await AsyncStorage.setItem('user_data', JSON.stringify(user));
+      const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+      await SecureStore.setItemAsync('access_token', newTokens.accessToken);
+      await SecureStore.setItemAsync('refresh_token', newTokens.refreshToken);
+      await SecureStore.setItemAsync('token_expiry', tokenExpiry.toISOString());
+      await SecureStore.setItemAsync('userId', user.id.toString());
+      await SecureStore.setItemAsync('user_data', JSON.stringify(user));
 
+      console.log('Sign-in successful:', user.id);
       setUser(user);
       setTokens(newTokens);
 
       router.replace(AUTH_CONFIG.ROUTES.TABS);
     } catch (error) {
-      console.error('Login error details:', error);
+      console.error('Sign-in failed:', error);
       throw error;
     }
   };
@@ -195,24 +209,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    *
    * @flow
    * 1. Call logout API
-   * 2. Clear stored tokens from AsyncStorage
+   * 2. Clear all stored data from SecureStore
    * 3. Clear user state and tokens
    * 4. Redirect to login screen
    */
   const signOut = async () => {
     try {
+      console.log('Initiating logout...');
+      // Call the logout API
       await logout({});
+      console.log('Logout API call successful');
     } catch (error) {
       console.error('Logout API error:', error);
+      // Proceed with cleanup even if the API call fails
     } finally {
       try {
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'userId', 'user_data']);
+        // Clear all stored items from SecureStore
+        await SecureStore.deleteItemAsync('access_token');
+        await SecureStore.deleteItemAsync('refresh_token');
+        await SecureStore.deleteItemAsync('token_expiry');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('user_data');
+        console.log('SecureStore cleared successfully');
+
+        // Reset state
         setUser(null);
         setTokens(null);
+        console.log('Auth state reset');
+
+        // Navigate to login screen
+        console.log('Navigating to login screen');
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
       } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
+        console.error('Error during logout cleanup:', cleanupError);
+        // Ensure navigation happens even if cleanup fails
         router.replace(AUTH_CONFIG.ROUTES.LOGIN);
+        throw new Error('Logout cleanup failed');
       }
     }
   };
@@ -282,15 +314,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const refreshAccessToken = async () => {
     try {
-      if (!tokens?.refreshToken) {
+      const storedRefreshToken = await SecureStore.getItemAsync('refresh_token');
+      if (!storedRefreshToken) {
         throw new Error('No refresh token available');
       }
 
-      const response = await api.post<ApiResponse<RefreshTokenResponse>>('/user/refresh-token', {
-        refreshToken: tokens.refreshToken,
+      const response = await refreshToken({
+        refreshToken: storedRefreshToken,
       });
 
-      const { tokens: newTokens } = response.data.data;
+      const { tokens: newTokens } = response.data;
+
+      const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+      await SecureStore.setItemAsync('access_token', newTokens.accessToken);
+      await SecureStore.setItemAsync('refresh_token', newTokens.refreshToken);
+      await SecureStore.setItemAsync('token_expiry', tokenExpiry.toISOString());
+
       setTokens(newTokens);
       return newTokens;
     } catch (error) {
